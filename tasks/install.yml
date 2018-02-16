@@ -1,0 +1,35 @@
+---
+# ----------------------------- Initial checks -------------------------------
+
+# Check that the required variables are set
+- assert:
+    that: "{{ item }} is defined"
+    msg: "Variable '{{ item }}' is mandatory to {{ role_action }} VDDK pluging."
+  with_items:
+    - v2v_build_dir
+    - v2v_vddk_install_dir
+    - v2v_vddk_package_name
+
+# Include the check tasks, to avoid running the installation if not necessary
+- include_tasks: check.yml
+
+# If VDDK plugin is already installed and we have not set vddk_override, then skip.
+- assert:
+    msg: "nbdkit is already installed and 'v2v_vddk_override' is not set to true"
+    that:
+      - not v2v_nbdkit_plugin_working or v2v_vddk_override
+
+- include_tasks: "repositories-{{ ansible_distribution | lower }}.yml"
+  
+- name: Ensure nbdkit package is installed
+  yum:
+    name: nbdkit
+    state: present
+
+- include_tasks: "vddk-install.yml"
+- include_tasks: "nbdkit-plugin-vddk-rpm.yml"
+
+- name: Install virt-v2v
+  yum:
+    state: present
+    name: virt-v2v

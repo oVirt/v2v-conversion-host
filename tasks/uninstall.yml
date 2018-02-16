@@ -1,0 +1,32 @@
+---
+# ----------------------------- Initial checks -------------------------------
+
+# Check that the required variables are set
+- assert:
+    that: "{{ item }} is defined"
+    msg: "Variable '{{ item }}' is mandatory to {{ role_action }} VDDK pluging."
+  with_items:
+    - v2v_vddk_install_dir
+
+- name: Ensure nbdkit-* package are not installed
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - nbdkit
+    - nbdkit-plugin-vddk
+
+- name: Remove packages repository
+  file:
+    path: /etc/yum.repos.d/v2v-nbdkit.repo
+    state: absent
+
+- name: Remove EPEL repository
+  yum:
+    name: epel-release
+    state: absent
+
+- name: Remove VDDK library
+  file:
+    path: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib"
+    state: absent

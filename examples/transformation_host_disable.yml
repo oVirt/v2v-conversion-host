@@ -1,0 +1,6 @@
+---
+- name: Disable conversion host role
+  hosts: all
+  roles:
+    - role: v2v.conversion-host
+      role_action: uninstall

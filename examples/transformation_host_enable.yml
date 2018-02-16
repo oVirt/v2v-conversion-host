@@ -1,0 +1,7 @@
+---
+- name: Enable conversion host role
+  hosts: all
+  roles:
+    - role: v2v.conversion-host
+      role_action: install
+
