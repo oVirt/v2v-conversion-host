@@ -33,3 +33,9 @@
   yum:
     state: present
     name: virt-v2v
+
+- name: Install virt-v2v wrapper
+  copy:
+    src: "virt-v2v-wrapper.py"
+    dest: "/usr/bin/"
+    mode: 0755

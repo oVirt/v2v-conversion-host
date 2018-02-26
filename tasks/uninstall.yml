@@ -30,3 +30,8 @@
   file:
     path: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib"
     state: absent
+
+- name: Remove virt-v2v wrapper
+  file:
+    path: "/usr/bin/virt-v2v-wrapper.sh"
+    state: absent
