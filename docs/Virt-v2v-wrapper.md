@@ -50,9 +50,8 @@ Source configuration:
 * `vmware_fingerprint`: fingerprint of SSL certificate on the source
   hypervisor (also called thumbprint)
 
-Output configuration:
-
-* `export_domain`: location of the oVirt NFS export domain;
+Output configuration: reffer to the section [Output
+configuration](#output-configuration) below.
 
 Miscellaneous:
 
@@ -75,6 +74,52 @@ Example:
             "[dataStore_1] My_Machine/My_Machine_2.vmdk"
         ]
     }
+
+## Output configuration
+
+There is no configuration key specifying the type of output. Rather the output
+method is chosen depending on the keys present. If there are keys defining
+multiple output modes the first one is selected base on the order of
+precedence. The order is following:
+
+1)  oVirt API upload
+
+2)  export domain
+
+### oVirt API upload
+
+To select oVirt API upload method add `rhv_url` to the configuraton. Together
+with `rhv_url` some other keys need to be also specified.
+
+* `rhv_url`: URL to the oVirt API endpoint.
+
+* `rhv_password`: password used to authorize to API
+
+* `rhv_cluster`: name of the target cluster
+
+* `rhv_storage`: name of the target storage domain
+
+* `rhv_cafile`: optional path to the CA certificate. If the key is not
+  specified wrapper looks for the certificate at the default VDSM location.
+
+Example:
+
+    {
+        ...
+        "rhv_url": "https://ovirt.example.com/ovirt-engine/api",
+        "rhv_password": "secret-password",
+        "rhv_cluster": "Default",
+        "rhv_storage": "data",
+        "rhv_cafile": "/etc/pki/vdsm/certs/cacert.pem"
+    }
+
+
+### Export domain
+
+To request conversion into export domain add the following key to the
+configuration:
+
+* `export_domain`: specify path to NFS share in the format `<hostname>:<path>`
 
 
 ## State File Format

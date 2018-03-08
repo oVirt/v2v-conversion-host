@@ -34,13 +34,11 @@ else:
     import subprocess
     xrange = range
 
-# import ovirtsdk4 as sdk
-# import ovirtsdk4.types as types
-
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
 VDSM_LOG_DIR = '/var/log/vdsm/import'
 VDSM_UID = 36
+VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
 
 # Tweaks
 VDSM = False
@@ -215,7 +213,17 @@ def wrapper(data, state_file, v2v_log):
             '-io', 'vddk-thumbprint=%s' % data['vmware_fingerprint'],
             ])
 
-    if 'export_domain' in data:
+    if 'rhv_url' in data:
+        v2v_args.extend([
+            '-o', 'rhv-upload',
+            '-oc', data['rhv_url'],
+            '-os', data['rhv_storage'],
+            '-op', data['rhv_password_file'],
+            '-oo', 'rhv-cafile=%s' % data['rhv_cafile'],
+            '-oo', 'rhv-cluster=%s' % data['rhv_cluster'],
+            '-oo', 'rhv-direct',
+            ])
+    elif 'export_domain' in data:
         v2v_args.extend([
             '-o', 'rhv',
             '-os', data['export_domain'],
@@ -268,6 +276,8 @@ def wrapper(data, state_file, v2v_log):
             proc.kill()
 
     state['return_code'] = proc.returncode
+    write_state(state)
+
     if proc.returncode != 0:
         state['failed'] = True
     state['finished'] = True
@@ -332,13 +342,30 @@ try:
         error('Unknown transport method: %s', data['transport_method'])
 
     # Targets (only export domain for now)
-    if 'export_domain' not in data:
+    if 'rhv_url' in data:
+        for k in [
+                'rhv_cluster',
+                'rhv_password',
+                'rhv_storage',
+                ]:
+            if k not in data:
+                error('Missing argument: %s' % k)
+        if 'rhv_cafile' not in data:
+            logging.info('Path to CA certificate not specified,'
+                         ' trying VDSM default: %s', VDSM_CA)
+            data['rhv_cafile'] = VDSM_CA
+    elif 'export_domain' in data:
+        pass
+    else:
         error('No target specified')
 
     # Store password(s)
     logging.info('Writing password file(s)')
     data['vmware_password_file'] = write_password(data['vmware_password'],
                                                   password_files)
+    if 'rhv_password' in data:
+        data['rhv_password_file'] = write_password(data['rhv_password'],
+                                                   password_files)
 
     # Send some useful info on stdout in JSON
     print(json.dumps({

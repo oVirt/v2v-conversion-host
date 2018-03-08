@@ -21,10 +21,13 @@
 
 - include_tasks: "repositories-{{ ansible_distribution | lower }}.yml"
   
-- name: Ensure nbdkit package is installed
+- name: Ensure nbdkit packages are installed
   yum:
-    name: nbdkit
+    name: "{{ item }}"
     state: present
+  with_items:
+    - nbdkit
+    - nbdkit-plugin-python2
 
 - include_tasks: "vddk-install.yml"
 - include_tasks: "nbdkit-plugin-vddk-rpm.yml"
