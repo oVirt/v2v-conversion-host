@@ -268,12 +268,10 @@ def wrapper(data, state_file, v2v_log):
             proc.kill()
 
     state['return_code'] = proc.returncode
+    if proc.returncode != 0:
+        state['failed'] = True
     state['finished'] = True
     write_state(state)
-
-    # TODO
-    # - post process OVF?
-    # - clean disks on error?
 
 
 def write_password(password, password_files):
