@@ -211,8 +211,8 @@ def wrapper(data, state_file, v2v_log):
     if data['transport_method'] == 'vddk':
         v2v_args.extend([
             '-it', 'vddk',
-            '--vddk-libdir', '/opt/vmware-vix-disklib-distrib',
-            '--vddk-thumbprint', data['vmware_fingerprint'],
+            '-io', 'vddk-libdir=%s' % '/opt/vmware-vix-disklib-distrib',
+            '-io', 'vddk-thumbprint=%s' % data['vmware_fingerprint'],
             ])
 
     if 'export_domain' in data:
