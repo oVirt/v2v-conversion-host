@@ -634,8 +634,9 @@ try:
     if 'network_mappings' in data:
         if isinstance(data['network_mappings'], list):
             for mapping in data['network_mappings']:
-                if not all (k in mapping for k in ("source", "destination")):
-                    error("Both 'source' and 'destination' must be provided in network mapping")
+                if not all(k in mapping for k in ("source", "destination")):
+                    error("Both 'source' and 'destination' must be provided"
+                          + " in network mapping")
         else:
             error("'network_mappings' must be an array")
 
