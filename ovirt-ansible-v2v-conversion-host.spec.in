@@ -32,6 +32,7 @@ sh build.sh install
 %{_datadir}/%{ansible_roles_dir}/%{roleprefix}%{rolename}
 
 %doc README.md
+%doc docs/
 %doc examples/
 
 %license LICENSE
