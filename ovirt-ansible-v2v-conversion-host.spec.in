@@ -38,5 +38,5 @@ sh build.sh install
 %license LICENSE
 
 %changelog
-* Thu Mar 22 2018 Tomáš Golembiovský <tgolembi@redhat.com> 0.1-1
+* Wed Mar 28 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.0.0-1
 - Initial release

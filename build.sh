@@ -1,8 +1,17 @@
 #!/bin/bash
 
-VERSION="0.1"
-MILESTONE=master
-RPM_RELEASE="0.1.$MILESTONE.$(date -u +%Y%m%d%H%M%S)"
+VERSION="1.0.0"
+if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
+    MILESTONE=
+    RPM_RELEASE="1"
+else
+    MILESTONE=master
+    GIT="$(
+        git describe --always --tags --dirty=.dr |
+        sed -r 's/^/git/; s/^[^-]*-//; s/-g/.git/'
+    )"
+    RPM_RELEASE="0.$MILESTONE.$GIT.$(date -u +%Y%m%d%H%M%S)"
+fi
 
 ROLE_NAME="oVirt.v2v-conversion-host"
 PACKAGE_NAME="ovirt-ansible-v2v-conversion-host"
