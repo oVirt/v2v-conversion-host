@@ -58,6 +58,10 @@ Miscellaneous:
 * `source_disks`: optional key containing list of disks in the VM; if specified
   it is used to initialize progress information in the state file
 
+* `network_mappings`: optional key containing list of network mappings; if
+   specified, it is used to connect the VM's NICs to the destination networks
+   during the conversion using virt-v2v `--bridge` option.
+
 Example:
 
     {
@@ -72,6 +76,16 @@ Example:
         "source_disks": [
             "[dataStore_1] My_Machine/My_Machine_1.vmdk",
             "[dataStore_1] My_Machine/My_Machine_2.vmdk"
+        ],
+        "network_mappings": [
+            {
+                "source": "networkA1",
+                "destination": "networkA2"
+            },
+            {
+                "source": "networkX1",
+                "destination": "networkX2"
+            }
         ]
     }
 

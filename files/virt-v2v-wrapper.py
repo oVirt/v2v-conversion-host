@@ -229,6 +229,11 @@ def wrapper(data, state_file, v2v_log):
             '-os', data['export_domain'],
             ])
 
+    if 'network_mappings' in data:
+        for mapping in data['network_mappings']:
+            v2v_args.extend(['--bridge', '%s:%s' %
+                            (mapping['source'], mapping['destination'])])
+
     proc = None
     with open(v2v_log, 'w') as log:
         env = os.environ.copy()
@@ -358,6 +363,15 @@ try:
         pass
     else:
         error('No target specified')
+
+    # Network mappings
+    if 'network_mappings' in data:
+        if isinstance(data['network_mappings'], list):
+            for mapping in data['network_mappings']:
+                if not all (k in mapping for k in ("source", "destination")):
+                    error("Both 'source' and 'destination' must be provided in network mapping")
+        else:
+            error("'network_mappings' must be an array")
 
     # Store password(s)
     logging.info('Writing password file(s)')
