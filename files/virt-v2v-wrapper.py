@@ -240,6 +240,8 @@ def wrapper(data, state_file, v2v_log):
     if DIRECT_BACKEND:
         logging.debug('Using direct backend. Hack, hack...')
         env['LIBGUESTFS_BACKEND'] = 'direct'
+    if 'virtio_win' in data:
+        env['VIRTIO_WIN'] = data['virtio_win']
 
     proc = None
     with open(v2v_log, 'w') as log:
@@ -373,6 +375,11 @@ try:
                     error("Both 'source' and 'destination' must be provided in network mapping")
         else:
             error("'network_mappings' must be an array")
+
+    # Virtio drivers
+    if 'virtio_win' in data:
+        if not os.path.isfile(data['virtio_win']):
+            error("'virtio_win' must be a path to virtio-win ISO image")
 
     # Store password(s)
     logging.info('Writing password file(s)')
