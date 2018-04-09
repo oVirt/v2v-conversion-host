@@ -234,14 +234,15 @@ def wrapper(data, state_file, v2v_log):
             v2v_args.extend(['--bridge', '%s:%s' %
                             (mapping['source'], mapping['destination'])])
 
+    # Prepare environment
+    env = os.environ.copy()
+    env['LANG'] = 'C'
+    if DIRECT_BACKEND:
+        logging.debug('Using direct backend. Hack, hack...')
+        env['LIBGUESTFS_BACKEND'] = 'direct'
+
     proc = None
     with open(v2v_log, 'w') as log:
-        env = os.environ.copy()
-        env['LANG'] = 'C'
-        if DIRECT_BACKEND:
-            logging.debug('Using direct backend. Hack, hack...')
-            env['LIBGUESTFS_BACKEND'] = 'direct'
-
         logging.info('Starting virt-v2v as: %r', v2v_args)
         proc = subprocess.Popen(
                 v2v_args,
