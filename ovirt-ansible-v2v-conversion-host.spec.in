@@ -38,5 +38,7 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Mon Apr  9 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.1.0-1
+- wrapper: added network_mappings and virtio_win keys to input data
 * Wed Mar 28 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.0.0-1
 - Initial release
