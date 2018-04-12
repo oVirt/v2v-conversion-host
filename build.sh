@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
     MILESTONE=
     RPM_RELEASE="1"

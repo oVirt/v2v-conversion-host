@@ -38,6 +38,9 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Thu Apr 12 2018 Tomáš Golembiovský <tgolembi@redhat.com>
+- wrapper: allow just filenames in virtio_win key
+- roles: create nbdkit repo file condionaly
 * Mon Apr  9 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.1.0-1
 - wrapper: added network_mappings and virtio_win keys to input data
 * Wed Mar 28 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.0.0-1
