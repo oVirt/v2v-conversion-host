@@ -17,3 +17,8 @@
       baseurl={{ v2v_repo_srpms_url }}
       enabled=1
       gpgcheck=0
+  when:
+    - "v2v_repo_rpms_name is defined"
+    - "v2v_repo_rpms_url is defined"
+    - "v2v_repo_srpms_name is defined"
+    - "v2v_repo_srpms_url is defined"
