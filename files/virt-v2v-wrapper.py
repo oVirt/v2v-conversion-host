@@ -37,6 +37,7 @@ else:
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
 VDSM_LOG_DIR = '/var/log/vdsm/import'
+VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
 VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
 
@@ -189,6 +190,52 @@ def log_parser(v2v_log):
     finally:
         if parser is not None:
             parser.close()
+
+
+def is_iso_domain(path):
+    """
+    Check if domain is ISO domain. @path is path to domain metadata file
+    """
+    try:
+        logging.debug('is_iso_domain check for %s', path)
+        with open(path, 'r') as f:
+            for line in f:
+                if line.rstrip() == 'CLASS=Iso':
+                    return True
+    except OSError:
+        logging.exception('Failed to read domain metadata')
+    return False
+
+
+def find_iso_domain():
+    """
+    Find path to the ISO domain from available domains mounted on host
+    """
+    if not os.path.isdir(VDSM_MOUNTS):
+        logging.error('Cannot find RHV domains')
+        return None
+    for sub in os.walk(VDSM_MOUNTS):
+
+        if 'dom_md' in sub[1]:
+            # This looks like a domain so focus on metadata only
+            try:
+                del sub[1][sub[1].index('master')]
+            except ValueError:
+                pass
+            try:
+                del sub[1][sub[1].index('images')]
+            except ValueError:
+                pass
+            continue
+
+        if 'metadata' in sub[2] and \
+                os.path.basename(sub[0]) == 'dom_md' and \
+                is_iso_domain(os.path.join(sub[0], 'metadata')):
+            return os.path.join(
+                os.path.dirname(sub[0]),
+                'images',
+                '11111111-1111-1111-1111-111111111111')
+    return None
 
 
 def write_state(state):
@@ -378,8 +425,18 @@ try:
 
     # Virtio drivers
     if 'virtio_win' in data:
-        if not os.path.isfile(data['virtio_win']):
-            error("'virtio_win' must be a path to virtio-win ISO image")
+        if not os.path.isabs(data['virtio_win']):
+            iso_domain = find_iso_domain()
+            if iso_domain is None:
+                error('ISO domain not found')
+            full_path = os.path.join(iso_domain, data['virtio_win'])
+        else:
+            full_path = data['virtio_win']
+        if not os.path.isfile(full_path):
+            error("'virtio_win' must be a path or file name of image in "
+                  "ISO domain")
+        data['virtio_win'] = full_path
+        logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
 
     # Store password(s)
     logging.info('Writing password file(s)')

@@ -62,8 +62,10 @@ Miscellaneous:
    specified, it is used to connect the VM's NICs to the destination networks
    during the conversion using virt-v2v `--bridge` option.
 
-* `virtio_win`: optional key containing path to virtio-win ISO image that; this
-  is usefull for installing Windows drivers to the VM during the conversion.
+* `virtio_win`: optional key containing path to virtio-win ISO image; this is
+  useful for installing Windows drivers to the VM during conversion. It may be
+  either absolute path or only a filename in which case path to ISO domain is
+  auto-detected.
 
 Example:
 
@@ -89,7 +91,8 @@ Example:
                 "source": "networkX1",
                 "destination": "networkX2"
             }
-        ]
+        ],
+        "virtio_win": "virtio-win-0.1.141.iso"
     }
 
 ## Output configuration
