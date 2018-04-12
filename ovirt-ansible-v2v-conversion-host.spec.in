@@ -38,6 +38,8 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Thu Apr 12 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.1.2-1
+- wrapper: fix license boiler plate
 * Thu Apr 12 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.1.1-1
 - wrapper: allow just filenames in virtio_win key
 - roles: create nbdkit repo file condionaly
