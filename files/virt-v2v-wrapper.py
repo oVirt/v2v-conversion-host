@@ -45,6 +45,14 @@ DIRECT_BACKEND = not VDSM
 
 
 def error(msg):
+    """
+    Function to produce an error and terminate the wrapper.
+
+    WARNING: This can be used only at the early initialization stage! Do NOT
+    use this once the password files are written or there are any other
+    temporary data that should be removed at exit. This function uses
+    sys.exit() which overcomes the code responsible for removing the files.
+    """
     logging.error(msg)
     sys.stderr.write(msg)
     sys.exit(1)
@@ -435,6 +443,10 @@ try:
                   "ISO domain")
         data['virtio_win'] = full_path
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+    #
+    # NOTE: don't use error() beyond this point!
+    #
 
     # Store password(s)
     logging.info('Writing password file(s)')
