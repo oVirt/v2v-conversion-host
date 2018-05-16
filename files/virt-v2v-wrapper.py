@@ -35,6 +35,9 @@ else:
     import subprocess
     xrange = range
 
+# Wrapper version
+VERSION = 1
+
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
 VDSM_LOG_DIR = '/var/log/vdsm/import'
@@ -402,6 +405,7 @@ logging.basicConfig(
     level=LOG_LEVEL,
     filename=wrapper_log,
     format='%(asctime)s:%(levelname)s: %(message)s (%(module)s:%(lineno)d)')
+logging.info('Wrapper version %d', VERSION)
 
 if VDSM:
     make_vdsm()
