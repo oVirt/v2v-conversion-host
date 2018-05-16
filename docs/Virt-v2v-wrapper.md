@@ -67,6 +67,9 @@ Miscellaneous:
   either absolute path or only a filename in which case path to ISO domain is
   auto-detected.
 
+* `allocation`: optional key specifying the allocation type to use; possible
+  values are `preallocated` and `sparse`.
+
 Example:
 
     {

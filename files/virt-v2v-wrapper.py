@@ -24,7 +24,10 @@ import sys
 import tempfile
 import time
 
+import ovirtsdk4 as sdk
 import six
+
+from urlparse import urlparse
 
 if six.PY2:
     import subprocess32 as subprocess
@@ -38,6 +41,17 @@ VDSM_LOG_DIR = '/var/log/vdsm/import'
 VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
 VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
+
+# For now there are limited possibilities in how we can select allocation type
+# and format. The best thing we can do now is to base the allocation on type of
+# target storage domain.
+PREALLOCATED_STORAGE_TYPES = (
+    sdk.types.StorageType.CINDER,
+    sdk.types.StorageType.FCP,
+    sdk.types.StorageType.GLUSTERFS,
+    sdk.types.StorageType.ISCSI,
+    sdk.types.StorageType.POSIXFS,
+    )
 
 # Tweaks
 VDSM = False
@@ -198,6 +212,25 @@ def log_parser(v2v_log):
             parser.close()
 
 
+@contextmanager
+def sdk_connection(data):
+    connection = None
+    url = urlparse(data['rhv_url'])
+    username = url.username if url.username is not None else 'admin@internal'
+    try:
+        connection = sdk.Connection(
+            url=str(data['rhv_url']),
+            username=str(username),
+            password=str(data['rhv_password']),
+            ca_file=str(data['rhv_cafile']),
+            log=logging.getLogger(),
+        )
+        yield connection
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 def is_iso_domain(path):
     """
     Check if domain is ISO domain. @path is path to domain metadata file
@@ -280,6 +313,11 @@ def wrapper(data, state_file, v2v_log):
         v2v_args.extend([
             '-o', 'rhv',
             '-os', data['export_domain'],
+            ])
+
+    if 'allocation' in data:
+        v2v_args.extend([
+            '-oa', data['allocation']
             ])
 
     if 'network_mappings' in data:
@@ -443,6 +481,28 @@ try:
                   "ISO domain")
         data['virtio_win'] = full_path
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+    # Allocation type
+    if 'allocation' in data:
+        if data['allocation'] not in ('preallocated', 'sparse'):
+            error('Invalid value for allocation type: %r' % data['allocation'])
+    else:
+        # Check storage domain type and decide on suitable allocation type
+        # Note: This is only temporary. We should get the info from the caller in
+        # the future.
+        domain_type = None
+        with sdk_connection(data) as c:
+            service = c.system_service().storage_domains_service()
+            domains = service.list(search='name="%s"' % str(data['rhv_storage']))
+            if len(domains) != 1:
+                error('Found %d domains matching "%s"!' % data['rhv_storage'])
+            domain_type = domains[0].storage.type
+        logging.info('Storage domain "%s" is of type %r', data['rhv_storage'],
+                    domain_type)
+        data['allocation'] = 'sparse'
+        if domain_type in PREALLOCATED_STORAGE_TYPES:
+            data['allocation'] = 'preallocated'
+        logging.info('... selected allocation type is %s', data['allocation'])
 
     #
     # NOTE: don't use error() beyond this point!
