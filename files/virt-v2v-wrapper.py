@@ -59,7 +59,14 @@ PREALLOCATED_STORAGE_TYPES = (
 
 # Tweaks
 VDSM = True
-DIRECT_BACKEND = not VDSM
+# We cannot use the libvirt backend in virt-v2v and have to use direct backend
+# for several reasons:
+# - it is necessary on oVirt host when running as root; and we need to run as
+#   root when using export domain as target (we use vdsm user for other
+#   targets)
+# - SSH transport method cannot be used with libvirt because it does not pass
+#   SSH_AUTH_SOCK env. variable to the QEMU process
+DIRECT_BACKEND = True
 
 
 def error(msg):
