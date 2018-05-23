@@ -42,3 +42,15 @@
     src: "virt-v2v-wrapper.py"
     dest: "/usr/bin/"
     mode: 0755
+
+- name: Look for SSH key
+  stat:
+      path: "~vdsm/.ssh/id_rsa"
+  ignore_errors: yes
+  register: stat_ssh_key
+
+- name: Create SSH key
+  command: ssh-keygen -b 4096 -t rsa -f ~vdsm/.ssh/id_rsa -N ''
+  become: true
+  become_user: vdsm
+  when: not stat_ssh_key.stat.exists

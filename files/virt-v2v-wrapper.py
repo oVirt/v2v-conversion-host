@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import re
+import signal
 import sys
 import tempfile
 import time
@@ -135,6 +136,11 @@ class OutputParser(object):
     DISK_PROGRESS_RE = re.compile(br'\s+\((\d+\.\d+)/100%\)')
     NBDKIT_DISK_PATH_RE = re.compile(
         br'nbdkit: debug: Opening file (.*) \(.*\)')
+    OVERLAY_SOURCE_RE = re.compile(
+        br' *overlay source qemu URI: json:.*"file\.path": ?"([^"]+)"')
+    VMDK_PATH_RE = re.compile(
+            br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
+            + br'(?P<disk>.*)(-flat)?\.vmdk')
 
     def __init__(self, v2v_log):
         self._log = open(v2v_log, 'rbU')
@@ -162,9 +168,21 @@ class OutputParser(object):
                 except ValueError:
                     logging.exception('Conversion error')
 
+            # VDDK
             m = self.NBDKIT_DISK_PATH_RE.match(line)
             if m is not None:
                 self._current_path = m.group(1).decode()
+                if self._current_disk is not None:
+                    logging.info('Copying path: %s', self._current_path)
+                    self._locate_disk(state)
+
+            # SSH
+            m = self.OVERLAY_SOURCE_RE.match(line)
+            if m is not None:
+                path = m.group(1).decode()
+                # Transform path to be raltive to storage
+                self._current_path = self.VMDK_PATH_RE.sub(
+                    br'[\g<store>] \g<vm>/\g<disk>', path)
                 if self._current_disk is not None:
                     logging.info('Copying path: %s', self._current_path)
                     self._locate_disk(state)
@@ -297,21 +315,27 @@ def write_state(state):
         json.dump(state, f)
 
 
-def wrapper(data, state_file, v2v_log):
+def wrapper(data, state_file, v2v_log, agent_sock=None):
     v2v_args = [
         '/usr/bin/virt-v2v', '-v', '-x',
         data['vm_name'],
-        '-ic', data['vmware_uri'],
-        '--password-file', data['vmware_password_file'],
         '-of', data['output_format'],
         '--bridge', 'ovirtmgmt',
     ]
 
     if data['transport_method'] == 'vddk':
         v2v_args.extend([
+            '-i', 'libvirt',
+            '-ic', data['vmware_uri'],
             '-it', 'vddk',
             '-io', 'vddk-libdir=%s' % '/opt/vmware-vix-disklib-distrib',
             '-io', 'vddk-thumbprint=%s' % data['vmware_fingerprint'],
+            '--password-file', data['vmware_password_file'],
+            ])
+    elif data['transport_method'] == 'ssh':
+        v2v_args.extend([
+            '-i', 'vmx',
+            '-it', 'ssh',
             ])
 
     if 'rhv_url' in data:
@@ -348,6 +372,8 @@ def wrapper(data, state_file, v2v_log):
         env['LIBGUESTFS_BACKEND'] = 'direct'
     if 'virtio_win' in data:
         env['VIRTIO_WIN'] = data['virtio_win']
+    if agent_sock is not None:
+        env['SSH_AUTH_SOCK'] = agent_sock
 
     proc = None
     with open(v2v_log, 'w') as log:
@@ -406,6 +432,34 @@ def write_password(password, password_files):
     return pfile[1]
 
 
+def spawn_ssh_agent():
+    try:
+        out = subprocess.check_output(['ssh-agent'])
+        logging.debug('ssh-agent: %s' % out)
+        sock = re.search(br'^SSH_AUTH_SOCK=([^;]+);', out, re.MULTILINE)
+        pid = re.search(br'^echo Agent pid ([0-9]+);', out, re.MULTILINE)
+        if not sock or not pid:
+            logging.error(
+                'Incomplete match of ssh-agent output; sock=%r; pid=%r',
+                sock, pid)
+            return None, None
+        agent_sock = sock.group(1).decode()
+        agent_pid = int(pid.group(1))
+        logging.info('SSH Agent started with PID %d', agent_pid)
+    except subprocess.CalledProcessError:
+        logging.error('Failed to start ssh-agent')
+        return None, None
+    env = os.environ.copy()
+    env['SSH_AUTH_SOCK'] = agent_sock
+    ret_code = subprocess.call(['ssh-add'], env=env)
+    if ret_code != 0:
+        logging.error('Failed to add SSH keys to the agent! ssh-add'
+                      ' terminated with return code %d', ret_code)
+        os.kill(agent_pid, signal.SIGTERM)
+        return None, None
+    return agent_pid, agent_sock
+
+
 ###########
 
 # Read and parse input -- hopefully this should be safe to do as root
@@ -444,14 +498,8 @@ password_files = []
 try:
     # Make sure all the needed keys are in data. This is rather poor
     # validation, but...
-    for k in [
-            'vm_name',
-            'vmware_fingerprint',
-            'vmware_uri',
-            'vmware_password',
-            ]:
-        if k not in data:
-            error('Missing argument: %s' % k)
+    if 'vm_name' not in data:
+            error('Missing vm_name')
 
     # Output file format (raw or qcow2)
     if 'output_format' in data:
@@ -464,8 +512,17 @@ try:
     # Transports (only VDDK for now)
     if 'transport_method' not in data:
         error('No transport method specified')
-    if data['transport_method'] != 'vddk':
+    if data['transport_method'] not in ('ssh', 'vddk'):
         error('Unknown transport method: %s', data['transport_method'])
+
+    if data['transport_method'] == 'vddk':
+        for k in [
+                'vmware_fingerprint',
+                'vmware_uri',
+                'vmware_password',
+                ]:
+            if k not in data:
+                error('Missing argument: %s' % k)
 
     # Targets (only export domain for now)
     if 'rhv_url' in data:
@@ -538,12 +595,14 @@ try:
 
     # Store password(s)
     logging.info('Writing password file(s)')
-    data['vmware_password_file'] = write_password(data['vmware_password'],
-                                                  password_files)
+    if 'vmware_password' in data:
+        data['vmware_password_file'] = write_password(data['vmware_password'],
+                                                      password_files)
     if 'rhv_password' in data:
         data['rhv_password_file'] = write_password(data['rhv_password'],
                                                    password_files)
 
+    # TODO: create (and manage) state file before dumping the json
     # Send some useful info on stdout in JSON
     print(json.dumps({
         'v2v_log': v2v_log,
@@ -554,7 +613,15 @@ try:
     # Let's get to work
     logging.info('Daemonizing')
     daemonize()
-    wrapper(data, state_file, v2v_log)
+    agent_pid = None
+    agent_sock = None
+    if data['transport_method'] == 'ssh':
+        agent_pid, agent_sock = spawn_ssh_agent()
+        if agent_pid is None:
+            raise RuntimeError('Failed to start ssh-agent')
+    wrapper(data, state_file, v2v_log, agent_sock)
+    if agent_pid is not None:
+        os.kill(agent_pid, signal.SIGTERM)
 
     # Remove password files
     logging.info('Removing password files')

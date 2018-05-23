@@ -34,14 +34,17 @@ input. Keys are mandatory unless explicitly stated otherwise.
 
 General information:
 
-* `vm_name`: name of the VM to import
+* `vm_name`: name of the VM to import. In case of `ssh` transport method this
+  is an URI containing the host and path to the VM files, e.g.
+  `ssh://root@1.2.3.4/vmfs/volumes/datastore/tg-mini/tg-mini.vmx`.
 
 * `output_format`: one of `raw`, or `qcow2`; default is `raw` if not specified
 
-Source configuration:
+* `transport_method`: type of transport to use; supported methods are `ssh` and
+  `vddk`.
 
-* `transport_method`: type of transport to use; for now only `vddk` is
-  supported
+For `ssh` method there are no other information necessary. For `vddk` the
+following keys need to be specified:
 
 * `vmware_uri`: libvirt URI of the source hypervisor
 
