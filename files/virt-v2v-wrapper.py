@@ -57,7 +57,7 @@ PREALLOCATED_STORAGE_TYPES = (
     )
 
 # Tweaks
-VDSM = False
+VDSM = True
 DIRECT_BACKEND = not VDSM
 
 
@@ -75,19 +75,31 @@ def error(msg):
     sys.exit(1)
 
 
-def make_vdsm():
+def make_vdsm(data):
     """Makes sure the process runs as vdsm user"""
     uid = os.geteuid()
     if uid == VDSM_UID:
-        logging.debug('Already running as vdsm user')
+        # logging.debug('Already running as vdsm user')
         return
     elif uid == 0:
-        logging.debug('Restarting as vdsm user')
-        os.chdir('/')
+        # We need to drop privileges and become vdsm user, but we also need the
+        # proper environment for the user which is tricky to get. The best
+        # thing we can do is spawn another instance. Unfortunately we have
+        # already read the data from stdin.
+        # logging.debug('Starting instance as vdsm user')
         cmd = '/usr/bin/sudo'
         args = [cmd, '-u', 'vdsm']
         args.extend(sys.argv)
-        os.execv(cmd, args)
+        wrapper = subprocess.Popen(args,
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        out, err = wrapper.communicate(json.dumps(data))
+        # logging.debug('vdsm instance finished')
+        sys.stdout.write(out)
+        sys.stderr.write(err)
+        # logging.debug('Terminating root instance')
+        sys.exit(wrapper.returncode)
     sys.stderr.write('Need to run as vdsm user or root!\n')
     sys.exit(1)
 
@@ -396,6 +408,22 @@ def write_password(password, password_files):
 
 ###########
 
+# Read and parse input -- hopefully this should be safe to do as root
+data = json.load(sys.stdin)
+
+# NOTE: this is just pre-check to find out whether we can run as vdsm user at
+# all. This is not validation of the input data!
+if 'export_domain' in data:
+    # Need to be root to mount NFS share
+    VDSM = False
+    # Cannot use libvirt backend as root on VDSM host due to permissions
+    DIRECT_BACKEND = True
+
+if VDSM:
+    make_vdsm(data)
+
+# The logging is delayed after we now which user runs the wrapper. Otherwise we
+# would have two logs.
 log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
 v2v_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s.log' % log_tag)
 wrapper_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s-wrapper.log' % log_tag)
@@ -405,10 +433,8 @@ logging.basicConfig(
     level=LOG_LEVEL,
     filename=wrapper_log,
     format='%(asctime)s:%(levelname)s: %(message)s (%(module)s:%(lineno)d)')
-logging.info('Wrapper version %d', VERSION)
 
-if VDSM:
-    make_vdsm()
+logging.info('Wrapper version %d, uid=%d', VERSION, os.getuid())
 
 logging.info('Will store virt-v2v log in: %s', v2v_log)
 logging.info('Will store state file in: %s', state_file)
@@ -416,9 +442,6 @@ logging.info('Will store state file in: %s', state_file)
 password_files = []
 
 try:
-    logging.info('Processing input data')
-    data = json.load(sys.stdin)
-
     # Make sure all the needed keys are in data. This is rather poor
     # validation, but...
     for k in [
@@ -492,17 +515,18 @@ try:
             error('Invalid value for allocation type: %r' % data['allocation'])
     else:
         # Check storage domain type and decide on suitable allocation type
-        # Note: This is only temporary. We should get the info from the caller in
-        # the future.
+        # Note: This is only temporary. We should get the info from the caller
+        # in the future.
         domain_type = None
         with sdk_connection(data) as c:
             service = c.system_service().storage_domains_service()
-            domains = service.list(search='name="%s"' % str(data['rhv_storage']))
+            domains = service.list(search='name="%s"' %
+                                   str(data['rhv_storage']))
             if len(domains) != 1:
                 error('Found %d domains matching "%s"!' % data['rhv_storage'])
             domain_type = domains[0].storage.type
         logging.info('Storage domain "%s" is of type %r', data['rhv_storage'],
-                    domain_type)
+                     domain_type)
         data['allocation'] = 'sparse'
         if domain_type in PREALLOCATED_STORAGE_TYPES:
             data['allocation'] = 'preallocated'
