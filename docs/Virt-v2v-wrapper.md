@@ -128,6 +128,9 @@ with `rhv_url` some other keys need to be also specified.
 * `rhv_cafile`: optional path to the CA certificate. If the key is not
   specified wrapper looks for the certificate at the default VDSM location.
 
+* `insecure_connection`: optional, whether to verify peer certificates. For now
+  used only when connecting to oVirt/RHV. Default is `false`.
+
 Example:
 
     {
@@ -136,7 +139,8 @@ Example:
         "rhv_password": "secret-password",
         "rhv_cluster": "Default",
         "rhv_storage": "data",
-        "rhv_cafile": "/etc/pki/vdsm/certs/cacert.pem"
+        "rhv_cafile": "/etc/pki/vdsm/certs/cacert.pem",
+        "insecure_connection": true
     }
 
 

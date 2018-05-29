@@ -258,12 +258,14 @@ def sdk_connection(data):
     url = urlparse(data['rhv_url'])
     username = url.username if url.username is not None else 'admin@internal'
     try:
+        insecure = data.get('insecure_connection', False)
         connection = sdk.Connection(
             url=str(data['rhv_url']),
             username=str(username),
             password=str(data['rhv_password']),
             ca_file=str(data['rhv_cafile']),
             log=logging.getLogger(),
+            insecure=insecure,
         )
         yield connection
     finally:
