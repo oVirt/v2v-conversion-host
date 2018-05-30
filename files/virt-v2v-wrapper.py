@@ -37,7 +37,7 @@ else:
     xrange = range
 
 # Wrapper version
-VERSION = 1
+VERSION = 2
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'

@@ -38,6 +38,12 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Wed May 30 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.3.0-1
+- add SSH transport method
+- changes in wrapper:
+  - use vdsm user
+  - add insecure_connection and install_drivers keys
+
 * Sun May 20 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.2.0-1
 - wrapper: add version number, assume allocation based on storage
 * Thu Apr 12 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.1.2-1
