@@ -483,8 +483,8 @@ def check_install_drivers(data):
         else:
             if iso_domain is None:
                 # This is not an error
-                log.warning('ISO domain not found' +
-                            ' (but install_drivers is true).')
+                logging.warning('ISO domain not found' +
+                                ' (but install_drivers is true).')
                 data['install_drivers'] = False
                 return
 
