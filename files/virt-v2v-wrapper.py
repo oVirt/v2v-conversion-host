@@ -470,6 +470,69 @@ def spawn_ssh_agent():
     return agent_pid, agent_sock
 
 
+def check_install_drivers(data):
+    if 'virtio_win' in data and os.path.isabs(data['virtio_win']):
+        full_path = data['virtio_win']
+    else:
+        iso_domain = find_iso_domain()
+
+        iso_name = data.get('virtio_win')
+        if iso_name is not None:
+            if iso_domain is None:
+                error('ISO domain not found')
+        else:
+            if iso_domain is None:
+                # This is not an error
+                log.warning('ISO domain not found' +
+                            ' (but install_drivers is true).')
+                data['install_drivers'] = False
+                return
+
+            # (priority, pattern)
+            patterns = [
+                (4, br'RHV-toolsSetup_([0-9._]+)\.iso'),
+                (3, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
+                (2, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
+                (1, br'virtio-win-([0-9.]+).iso'),
+                ]
+            patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
+                        for p in patterns]
+            best_name = None
+            best_version = None
+            best_priority = -1
+            for fname in os.listdir(iso_domain):
+                if not os.path.isfile(os.path.join(iso_domain, fname)):
+                    continue
+                for priority, pat in patterns:
+                    m = pat.match(fname)
+                    if not m:
+                        continue
+                    version = m.group(1)
+                    logging.debug('Matched ISO %r (priority %d)',
+                                  fname, priority)
+                    if best_version is None or \
+                            (best_version < version and
+                             best_priority <= priority):
+                        best_name = fname
+                        best_version = version
+
+            if best_name is None:
+                # Nothing found, this is not an error
+                logging.warn('Could not find any ISO with drivers' +
+                             ' (but install_drivers is true).')
+                data['install_drivers'] = False
+                return
+            iso_name = best_name
+
+        full_path = os.path.join(iso_domain, iso_name)
+
+    if not os.path.isfile(full_path):
+        error("'virtio_win' must be a path or file name of image in "
+              "ISO domain")
+    data['virtio_win'] = full_path
+    logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+
 ###########
 
 # Read and parse input -- hopefully this should be safe to do as root
@@ -563,18 +626,12 @@ try:
 
     # Virtio drivers
     if 'virtio_win' in data:
-        if not os.path.isabs(data['virtio_win']):
-            iso_domain = find_iso_domain()
-            if iso_domain is None:
-                error('ISO domain not found')
-            full_path = os.path.join(iso_domain, data['virtio_win'])
-        else:
-            full_path = data['virtio_win']
-        if not os.path.isfile(full_path):
-            error("'virtio_win' must be a path or file name of image in "
-                  "ISO domain")
-        data['virtio_win'] = full_path
-        logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+        # This is for backward compatibility
+        data['install_drivers'] = True
+    if 'install_drivers' in data:
+        check_install_drivers(data)
+    else:
+        data['install_drivers'] = False
 
     # Allocation type
     if 'allocation' in data:

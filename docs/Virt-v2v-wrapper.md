@@ -70,6 +70,14 @@ Miscellaneous:
   either absolute path or only a filename in which case path to ISO domain is
   auto-detected.
 
+* `install_drivers`: optional key whether to install Windows drivers during
+  conversion, default is `false`. If `install_drivers` is `true` and
+  `virtio_win` is not specified, wrapper attempts to automatically select best
+  ISO from the ISO domain. Note that when no ISO is found this does not lead to
+  failed conversion. Just no drivers will be installed in this case. This is
+  different from situation when `virtio_win` is specified but points to
+  non-existing ISO, which is an error.
+
 * `allocation`: optional key specifying the allocation type to use; possible
   values are `preallocated` and `sparse`.
 
