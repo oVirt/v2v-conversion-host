@@ -386,7 +386,8 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
 
     proc = None
     with open(v2v_log, 'w') as log:
-        logging.info('Starting virt-v2v as: %r', v2v_args)
+        logging.info('Starting virt-v2v as: %r, environment: %r',
+                     v2v_args, env)
         proc = subprocess.Popen(
                 v2v_args,
                 stderr=subprocess.STDOUT,
