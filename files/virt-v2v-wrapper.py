@@ -357,6 +357,11 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
             '-oo', 'rhv-cluster=%s' % data['rhv_cluster'],
             '-oo', 'rhv-direct',
             ])
+        if data['insecure_connection']:
+            v2v_args.extend(['-oo', 'rhv-verifypeer=%s' %
+                            ('false' if data['insecure_connection'] else
+                             'true')])
+
     elif 'export_domain' in data:
         v2v_args.extend([
             '-o', 'rhv',
