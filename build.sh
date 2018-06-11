@@ -16,12 +16,13 @@ fi
 ROLE_NAME="oVirt.v2v-conversion-host"
 PACKAGE_NAME="ovirt-ansible-v2v-conversion-host"
 PREFIX=/usr/local
-DATAROOT_DIR=$PREFIX/share
+DATAROOT_DIR=${DATAROOT_DIR:-${PREFIX}/share}
 ROLES_DATAROOT_DIR=$DATAROOT_DIR/ansible/roles
 DOC_DIR=$DATAROOT_DIR/doc
 PKG_DATA_DIR=${PKG_DATA_DIR:-$ROLES_DATAROOT_DIR/$PACKAGE_NAME}
 PKG_DATA_DIR_ORIG=${PKG_DATA_DIR_ORIG:-$PKG_DATA_DIR}
 PKG_DOC_DIR=${PKG_DOC_DIR:-$DOC_DIR/$PACKAGE_NAME}
+AUX_DATA_DIR=${AUX_DATA_DIR:-${DATAROOT_DIR}/${PACKAGE_NAME}}
 
 RPM_VERSION=$VERSION
 PACKAGE_VERSION=$VERSION
@@ -52,6 +53,10 @@ install() {
   cp -pR files/ $PKG_DATA_DIR
   cp -pR meta/ $PKG_DATA_DIR
   cp -pR tasks/ $PKG_DATA_DIR
+
+  mkdir -p "$AUX_DATA_DIR"
+  mkdir -p "$AUX_DATA_DIR/playbooks"
+  cp -pR examples/*.yml "$AUX_DATA_DIR/playbooks"
 
   echo "Installation done."
 }
