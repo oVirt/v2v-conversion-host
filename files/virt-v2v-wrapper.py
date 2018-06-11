@@ -332,7 +332,7 @@ def write_state(state):
         json.dump(state, f)
 
 
-def wrapper(data, state_file, v2v_log, agent_sock=None):
+def wrapper(data, state, v2v_log, agent_sock=None):
     v2v_args = [
         '/usr/bin/virt-v2v', '-v', '-x',
         data['vm_name'],
@@ -411,20 +411,8 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
                 )
 
     try:
-        state = {
-            'started': True,
-            'pid': proc.pid,
-            'disks': [],
-            }
-        if 'source_disks' in data:
-            logging.debug('Initializing disk list from %r',
-                          data['source_disks'])
-            for d in data['source_disks']:
-                state['disks'].append({
-                    'path': d,
-                    'progress': 0})
-            state['disk_count'] = len(data['source_disks'])
-
+        state['started'] = True
+        state['pid'] = proc.pid
         write_state(state)
         with log_parser(v2v_log) as parser:
             while proc.poll() is None:
@@ -445,7 +433,6 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
 
     if proc.returncode != 0:
         state['failed'] = True
-    state['finished'] = True
     write_state(state)
 
 
@@ -700,34 +687,58 @@ try:
         data['ssh_key_file'] = write_password(data['ssh_key'],
                                               password_files)
 
-    # TODO: create (and manage) state file before dumping the json
-    # Send some useful info on stdout in JSON
-    print(json.dumps({
-        'v2v_log': v2v_log,
-        'wrapper_log': wrapper_log,
-        'state_file': state_file,
-    }))
+    # Create state file before dumping the JSON
+    state = {
+            'disks': [],
+            }
+    try:
+        if 'source_disks' in data:
+            logging.debug('Initializing disk list from %r',
+                          data['source_disks'])
+            for d in data['source_disks']:
+                state['disks'].append({
+                    'path': d,
+                    'progress': 0})
+            state['disk_count'] = len(data['source_disks'])
+        write_state(state)
 
-    # Let's get to work
-    logging.info('Daemonizing')
-    daemonize()
-    agent_pid = None
-    agent_sock = None
-    if data['transport_method'] == 'ssh':
-        agent_pid, agent_sock = spawn_ssh_agent(data)
-        if agent_pid is None:
-            raise RuntimeError('Failed to start ssh-agent')
-    wrapper(data, state_file, v2v_log, agent_sock)
-    if agent_pid is not None:
-        os.kill(agent_pid, signal.SIGTERM)
+        # Send some useful info on stdout in JSON
+        print(json.dumps({
+            'v2v_log': v2v_log,
+            'wrapper_log': wrapper_log,
+            'state_file': state_file,
+        }))
 
-    # Remove password files
-    logging.info('Removing password files')
-    for f in password_files:
-        try:
-            os.remove(f)
-        except OSError:
-            logging.exception('Error while removing password file: %s' % f)
+        # Let's get to work
+        logging.info('Daemonizing')
+        daemonize()
+        agent_pid = None
+        agent_sock = None
+        if data['transport_method'] == 'ssh':
+            agent_pid, agent_sock = spawn_ssh_agent(data)
+            if agent_pid is None:
+                raise RuntimeError('Failed to start ssh-agent')
+        wrapper(data, state, v2v_log, agent_sock)
+        if agent_pid is not None:
+            os.kill(agent_pid, signal.SIGTERM)
+
+        # Remove password files
+        logging.info('Removing password files')
+        for f in password_files:
+            try:
+                os.remove(f)
+            except OSError:
+                logging.exception('Error while removing password file: %s' % f)
+    except Exception:
+        # No need to log the exception, it will get logged below
+        logging.error('An error occured, finishing state file...')
+        state['finished'] = True
+        state['failed'] = True
+        write_state(state)
+        raise
+
+    state['finished'] = True
+    write_state(state)
 
 except Exception:
     logging.exception('Wrapper failure')
