@@ -258,7 +258,7 @@ def sdk_connection(data):
     url = urlparse(data['rhv_url'])
     username = url.username if url.username is not None else 'admin@internal'
     try:
-        insecure = data.get('insecure_connection', False)
+        insecure = data['insecure_connection']
         connection = sdk.Connection(
             url=str(data['rhv_url']),
             username=str(username),
@@ -632,6 +632,12 @@ try:
         check_install_drivers(data)
     else:
         data['install_drivers'] = False
+
+    # Insecure connection
+    if 'insecure_connection' not in data:
+        data['insecure_connection'] = False
+    if data['insecure_connection']:
+        logging.info('SSL verification is disabled for oVirt SDK connections')
 
     # Allocation type
     if 'allocation' in data:
