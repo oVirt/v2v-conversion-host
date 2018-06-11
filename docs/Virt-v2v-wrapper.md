@@ -43,8 +43,7 @@ General information:
 * `transport_method`: type of transport to use; supported methods are `ssh` and
   `vddk`.
 
-For `ssh` method there are no other information necessary. For `vddk` the
-following keys need to be specified:
+For `vddk` the following keys need to be specified:
 
 * `vmware_uri`: libvirt URI of the source hypervisor
 
@@ -52,6 +51,12 @@ following keys need to be specified:
 
 * `vmware_fingerprint`: fingerprint of SSL certificate on the source
   hypervisor (also called thumbprint)
+
+For `ssh` method there are no other information necessary. Optionaly the
+following can be specified:
+
+* `ssh_key`: optional, private part of SSH key to use. If this is not provided
+  then keys in ~/.ssh directory are used.
 
 Output configuration: reffer to the section [Output
 configuration](#output-configuration) below.

@@ -447,7 +447,7 @@ def write_password(password, password_files):
     return pfile[1]
 
 
-def spawn_ssh_agent():
+def spawn_ssh_agent(data):
     try:
         out = subprocess.check_output(['ssh-agent'])
         logging.debug('ssh-agent: %s' % out)
@@ -466,7 +466,13 @@ def spawn_ssh_agent():
         return None, None
     env = os.environ.copy()
     env['SSH_AUTH_SOCK'] = agent_sock
-    ret_code = subprocess.call(['ssh-add'], env=env)
+    cmd = ['ssh-add']
+    if 'ssh_key_file' in data:
+        logging.info('Using custom SSH key')
+        cmd.append(data['ssh_key_file'])
+    else:
+        logging.info('Using SSH key(s) from ~/.ssh')
+    ret_code = subprocess.call(cmd, env=env)
     if ret_code != 0:
         logging.error('Failed to add SSH keys to the agent! ssh-add'
                       ' terminated with return code %d', ret_code)
@@ -679,6 +685,9 @@ try:
     if 'rhv_password' in data:
         data['rhv_password_file'] = write_password(data['rhv_password'],
                                                    password_files)
+    if 'ssh_key' in data:
+        data['ssh_key_file'] = write_password(data['ssh_key'],
+                                              password_files)
 
     # TODO: create (and manage) state file before dumping the json
     # Send some useful info on stdout in JSON
@@ -694,7 +703,7 @@ try:
     agent_pid = None
     agent_sock = None
     if data['transport_method'] == 'ssh':
-        agent_pid, agent_sock = spawn_ssh_agent()
+        agent_pid, agent_sock = spawn_ssh_agent(data)
         if agent_pid is None:
             raise RuntimeError('Failed to start ssh-agent')
     wrapper(data, state_file, v2v_log, agent_sock)
