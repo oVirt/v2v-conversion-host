@@ -330,6 +330,7 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
         data['vm_name'],
         '-of', data['output_format'],
         '--bridge', 'ovirtmgmt',
+        '--root', 'first'
     ]
 
     if data['transport_method'] == 'vddk':
