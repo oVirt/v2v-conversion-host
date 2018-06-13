@@ -396,6 +396,7 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
                      v2v_args, env)
         proc = subprocess.Popen(
                 v2v_args,
+                stdin=subprocess.DEVNULL,
                 stderr=subprocess.STDOUT,
                 stdout=log,
                 env=env,
