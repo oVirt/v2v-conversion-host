@@ -41,6 +41,14 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Thu Jun 14 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.4.1-1
+- wrapper changes:
+  - set stdin for virt-v2v to /dev/null
+  - pass --root=first argument and -oo rhv-verifypeer=false on insecure connection
+  - add support for reading SSH key from input
+- install playbooks into secondary location
+- point to sources on GitHub
+
 * Wed May 30 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.3.1-1
 - wrapper: fix syntax error
 
