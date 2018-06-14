@@ -32,9 +32,11 @@ from urlparse import urlparse
 
 if six.PY2:
     import subprocess32 as subprocess
+    DEVNULL = open(os.devnull, 'r+')
 else:
     import subprocess
     xrange = range
+    DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
 VERSION = 4
@@ -396,7 +398,7 @@ def wrapper(data, state_file, v2v_log, agent_sock=None):
                      v2v_args, env)
         proc = subprocess.Popen(
                 v2v_args,
-                stdin=subprocess.DEVNULL,
+                stdin=DEVNULL,
                 stderr=subprocess.STDOUT,
                 stdout=log,
                 env=env,
