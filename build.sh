@@ -8,7 +8,7 @@ else
     MILESTONE=master
     GIT="$(
         git describe --always --tags --dirty=.dr |
-        sed -r 's/^/git/; s/^[^-]*-//; s/-g/.git/; s/-/_/g' |
+        sed -r 's/^/git/; s/^[^-]*-//; s/-g/.git/; s/-/_/g'
     )"
     RPM_RELEASE="0.$MILESTONE.$GIT.$(date -u +%Y%m%d%H%M%S)"
 fi
