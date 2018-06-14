@@ -41,6 +41,9 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Fri Jun 15 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.4.1-1
+- wrapper: fix problem with missing symbol
+
 * Thu Jun 14 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.4.0-1
 - wrapper changes:
   - set stdin for virt-v2v to /dev/null
