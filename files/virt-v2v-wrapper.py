@@ -40,10 +40,11 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "5.1"
+VERSION = "5.2"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
+TIMEOUT = 300
 VDSM_LOG_DIR = '/var/log/vdsm/import'
 VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
@@ -161,6 +162,7 @@ class OutputParser(object):
     VMDK_PATH_RE = re.compile(
             br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
             + br'(?P<disk>.*)(-flat)?\.vmdk')
+    RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
 
     def __init__(self, v2v_log):
         self._log = open(v2v_log, 'rbU')
@@ -219,6 +221,13 @@ class OutputParser(object):
                         logging.exception('Conversion error')
                 else:
                     logging.debug('Skipping progress update for unknown disk')
+
+            m = self.RHV_DISK_UUID.match(line)
+            if m is not None:
+                path = state['disks'][self._current_disk]['path']
+                disk_id = m.group('uuid')
+                state['internal']['disk_ids'][path] = disk_id
+                logging.debug('Path \'%s\' has disk id=\'%s\'', path, disk_id)
         return state
 
     def close(self):
@@ -339,6 +348,8 @@ def find_iso_domain():
 
 
 def write_state(state):
+    state = state.copy()
+    del state['internal']
     with open(state_file, 'w') as f:
         json.dump(state, f)
 
@@ -552,6 +563,50 @@ def check_install_drivers(data):
     logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
 
 
+def handle_cleanup(data, state):
+    with sdk_connection(data) as conn:
+        disks_service = conn.system_service().disks_service()
+        transfers_service = conn.system_service().image_transfers_service()
+        disk_ids = state['internal']['disk_ids'].values()
+        # First stop all active transfers...
+        try:
+            transfers = transfers_service.list()
+            transfers = [t for t in transfers if t.image.id in disk_ids]
+            if len(transfers) == 0:
+                logging.debug('No active transfers to cancel')
+            for transfer in transfers:
+                logging.info('Canceling transfer id=%s for disk=%s',
+                             transfer.id, transfer.image.id)
+                transfer_service = transfers_service.image_transfer_service(
+                    transfer.id)
+                transfer_service.cancel()
+                # The incomplete disk will be removed automatically
+                disk_ids.remove(transfer.image.id)
+        except sdk.Error:
+            logging.exception('Failed to cancel transfers')
+
+        # ... then delete the uploaded disks
+        logging.info('Removing disks: %r', disk_ids)
+        endt = time.time() + TIMEOUT
+        while len(disk_ids) > 0:
+            for disk_id in disk_ids:
+                try:
+                    disk_service = disks_service.disk_service(disk_id)
+                    disk = disk_service.get()
+                    if disk.status != sdk.types.DiskStatus.OK:
+                        continue
+                    logging.info('Removing disk id=%s', disk_id)
+                    disk_service.remove()
+                    disk_ids.remove(disk_id)
+                except sdk.Error:
+                    logging.exception('Failed to remove disk id=%s',
+                                      disk_id)
+            if time.time() > endt:
+                logging.error('Timed out waiting for disks: %r', disk_ids)
+                break
+            time.sleep(1)
+
+
 ###########
 
 # Read and parse input -- hopefully this should be safe to do as root
@@ -701,6 +756,9 @@ try:
     # Create state file before dumping the JSON
     state = {
             'disks': [],
+            'internal': {
+                'disk_ids': {},
+                },
             }
     try:
         if 'source_disks' in data:
@@ -733,20 +791,29 @@ try:
         if agent_pid is not None:
             os.kill(agent_pid, signal.SIGTERM)
 
-        # Remove password files
-        logging.info('Removing password files')
-        for f in password_files:
-            try:
-                os.remove(f)
-            except OSError:
-                logging.exception('Error while removing password file: %s' % f)
     except Exception:
         # No need to log the exception, it will get logged below
         logging.error('An error occured, finishing state file...')
-        state['finished'] = True
         state['failed'] = True
         write_state(state)
         raise
+    finally:
+        if 'failed' in state:
+            # Perform cleanup after failed conversion
+            logging.debug('Cleanup phase')
+            try:
+                handle_cleanup(data, state)
+            finally:
+                state['finished'] = True
+                write_state(state)
+
+    # Remove password files
+    logging.info('Removing password files')
+    for f in password_files:
+        try:
+            os.remove(f)
+        except OSError:
+            logging.exception('Error while removing password file: %s' % f)
 
     state['finished'] = True
     write_state(state)
