@@ -46,8 +46,8 @@
   find:
     paths: "{{ v2v_build_dir }}"
     patterns: "nbdkit-plugin-vddk.spec*"
-    recurse: yes
-    use_regex: no
+    recurse: "yes"
+    use_regex: "no"
   register: vddk_spec
 
 - assert:
@@ -66,7 +66,7 @@
     path: "{{ v2v_build_dir }}/nbdkit-plugin-vddk.spec"
     regexp: '^(%global vddkdir) .*$'
     replace: "\\1 {{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib"
-    backup: yes
+    backup: "yes"
 
 # -------------------- Build and install the nbdkit plugin ---------------------
 - name: Build RPM
@@ -87,8 +87,8 @@
   find:
     paths: "{{ v2v_build_dir }}/x86_64"
     patterns: "nbdkit-plugin-vddk-[0-9]*.x86_64.rpm"
-    recurse: no
-    use_regex: no
+    recurse: "no"
+    use_regex: "no"
   register: plugin_rpm
 
 - assert:

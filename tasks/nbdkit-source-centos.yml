@@ -1,9 +1,9 @@
 ---
 - name: Download Makefile file
-  get_url: 
+  get_url:
     url: "http://git.annexia.org/?p=nbdkit-plugin-vddk.git;a=blob_plain;f=Makefile;hb=HEAD"
     dest: "{{ v2v_build_dir }}/Makefile"
-    mode: 0400 
+    mode: 0400
 
 - name: Download spec file
   get_url:

@@ -2,20 +2,20 @@
 - name: Stat VDDK library
   stat:
     path: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib/lib64/libvixDiskLib.so"
-  ignore_errors: yes
+  ignore_errors: "yes"
   register: stat_vddk_library
 
 - name: Stat VDDK nbdkit plugin
   stat:
-      path: "/usr/lib64/nbdkit/plugins/nbdkit-vddk-plugin.so"
-  ignore_errors: yes
+    path: "/usr/lib64/nbdkit/plugins/nbdkit-vddk-plugin.so"
+  ignore_errors: "yes"
   register: stat_nbdkit_plugin
 
 - name: Check if VDDK nbdkit plugin works
   command: nbdkit --dump-plugin vddk
   environment:
     LD_LIBRARY_PATH: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib/lib64"
-  ignore_errors: yes
+  ignore_errors: "yes"
   register: command_nbdkit_plugin
 
 - name: Set VDDK and nbdkit facts

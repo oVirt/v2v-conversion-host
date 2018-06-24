@@ -3,7 +3,7 @@
   file:
     path: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib/"
     state: absent
-    
+
 - name: Create directory for VDDK
   file:
     path: "{{ v2v_vddk_install_dir }}"

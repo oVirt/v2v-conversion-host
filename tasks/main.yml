@@ -14,4 +14,3 @@
 
 # Include the tasks corresponding to the role_action
 - include_tasks: "{{ role_action }}.yml"
-

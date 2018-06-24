@@ -8,8 +8,8 @@
   find:
     paths: "{{ v2v_build_dir }}"
     patterns: "nbdkit-[0-9]*.src.rpm"
-    recurse: no
-    use_regex: no
+    recurse: "no"
+    use_regex: "no"
   register: nbdkit_srpm
 
 - name: Extract nbdkit SRPM
@@ -21,4 +21,3 @@
     "{{ nbdkit_srpm.files[0].path }}"
   args:
     chdir: "{{ v2v_build_dir }}"
-
