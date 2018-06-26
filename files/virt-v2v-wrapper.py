@@ -287,6 +287,8 @@ def is_iso_domain(path):
                     return True
     except OSError:
         logging.exception('Failed to read domain metadata')
+    except IOError:
+        logging.exception('Failed to read domain metadata')
     return False
 
 
@@ -310,6 +312,10 @@ def find_iso_domain():
             except ValueError:
                 pass
             continue
+
+        if 'blockSD' in sub[1]:
+            # Skip block storage domains, we don't support ISOs there
+            del sub[1][sub[1].index('blockSD')]
 
         if 'metadata' in sub[2] and \
                 os.path.basename(sub[0]) == 'dom_md' and \
