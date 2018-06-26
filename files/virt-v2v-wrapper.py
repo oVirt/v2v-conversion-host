@@ -39,7 +39,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = 5
+VERSION = "5.1"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -582,7 +582,7 @@ logging.basicConfig(
     filename=wrapper_log,
     format='%(asctime)s:%(levelname)s: %(message)s (%(module)s:%(lineno)d)')
 
-logging.info('Wrapper version %d, uid=%d', VERSION, os.getuid())
+logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
 logging.info('Will store virt-v2v log in: %s', v2v_log)
 logging.info('Will store state file in: %s', state_file)
