@@ -19,6 +19,7 @@ from contextlib import contextmanager
 import json
 import logging
 import os
+import pycurl
 import re
 import signal
 import sys
@@ -137,6 +138,16 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stdin.fileno())
     os.dup2(dev_null.fileno(), sys.stdout.fileno())
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
+
+    # Re-initialize cURL. This is necessary to re-initialze the PKCS #11
+    # security tokens in NSS. Otherwise any use of SDK after the fork() would
+    # lead to the error:
+    #
+    #    A PKCS #11 module returned CKR_DEVICE_ERROR, indicating that a
+    #    problem has occurred with the token or slot.
+    #
+    pycurl.global_cleanup()
+    pycurl.global_init(pycurl.GLOBAL_ALL)
 
 
 class OutputParser(object):
