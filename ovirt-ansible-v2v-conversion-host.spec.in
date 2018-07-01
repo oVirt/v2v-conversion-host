@@ -41,6 +41,11 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Sun Jul  1 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.5.0-1
+- wrapper changes:
+  - clean disks on conversion failure
+  - don't look for ISOs on block storage domains
+
 * Fri Jun 15 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.4.1-1
 - wrapper: fix problem with missing symbol
 
