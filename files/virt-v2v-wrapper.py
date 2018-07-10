@@ -406,8 +406,13 @@ def wrapper(data, state, v2v_log, agent_sock=None):
 
     if 'network_mappings' in data:
         for mapping in data['network_mappings']:
-            v2v_args.extend(['--bridge', '%s:%s' %
-                            (mapping['source'], mapping['destination'])])
+            if 'mac_address' in mapping:
+                v2v_args.extend(['--mac', '%s:bridge:%s' %
+                                (mapping['mac_address'],
+                                    mapping['destination'])])
+            else:
+                v2v_args.extend(['--bridge', '%s:%s' %
+                                (mapping['source'], mapping['destination'])])
 
     # Prepare environment
     env = os.environ.copy()
