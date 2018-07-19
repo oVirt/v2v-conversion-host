@@ -34,8 +34,6 @@ make
 rpm-build
 nbdkit-devel
 gnutls-devel
-
-# ? pkgs_before_builddeps and pkgs_after_builddeps
 %end
 
 %post --log=/root/ks-post-v2v.log --erroronfail
