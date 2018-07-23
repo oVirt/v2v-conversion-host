@@ -40,7 +40,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "6.1"
+VERSION = "6.2"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -617,6 +617,16 @@ def handle_cleanup(data, state):
 ###########
 # Checks
 
+def check_rhv_guest_tools():
+    """
+    Make sure there is ISO domain with at least one ISO with windows drivers.
+    Preferably RHV Guest Tools ISO.
+    """
+    data = {'install_drivers': True}
+    check_install_drivers(data)
+    return ('virtio_win' in data)
+
+
 def check_rhv_version():
     import rpmUtils.transaction
     import rpmUtils.miscutils
@@ -634,6 +644,7 @@ def check_rhv_version():
 
 
 CHECKS = {
+    'rhv-guest-tools': check_rhv_guest_tools,
     'rhv-version': check_rhv_version,
 }
 
