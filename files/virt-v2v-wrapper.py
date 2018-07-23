@@ -613,6 +613,11 @@ def handle_cleanup(data, state):
 
 
 ###########
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--version':
+        print('virt-v2v-wrapper %s' % VERSION)
+        sys.exit(0)
+
 
 # Read and parse input -- hopefully this should be safe to do as root
 data = json.load(sys.stdin)
