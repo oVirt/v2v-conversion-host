@@ -29,13 +29,13 @@ import time
 import ovirtsdk4 as sdk
 import six
 
-from urlparse import urlparse
-
 if six.PY2:
     import subprocess32 as subprocess
+    from urlparse import urlparse
     DEVNULL = open(os.devnull, 'r+')
 else:
     import subprocess
+    from urllib.parse import urlparse
     xrange = range
     DEVNULL = subprocess.DEVNULL
 
