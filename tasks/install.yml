@@ -46,6 +46,9 @@
 - name: Validate RHV host -- RHV version requirement
   command: /usr/bin/virt-v2v-wrapper.py --check-rhv-version
 
+- name: Validate RHV host -- RHV Guest Tools
+  command: /usr/bin/virt-v2v-wrapper.py --check-rhv-guest-tools
+
 - name: Look for SSH key
   stat:
     path: "~vdsm/.ssh/id_rsa"
