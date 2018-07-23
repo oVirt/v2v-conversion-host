@@ -15,6 +15,7 @@
     url: "{{ v2v_vddk_package_url }}"
     dest: "/tmp/{{ v2v_vddk_package_name }}"
     mode: 0600
+  when: v2v_vddk_package_url is defined
 
 - name: Extract VDDK
   unarchive:
