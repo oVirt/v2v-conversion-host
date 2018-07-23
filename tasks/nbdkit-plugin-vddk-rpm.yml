@@ -107,7 +107,7 @@
     state: absent
     path: "{{ v2v_build_dir }}/"
 
-- name: Ensure build dependenciess are removed
+- name: Ensure build dependencies are removed
   yum:
     name: "{{ item.name }}"
     state: absent
