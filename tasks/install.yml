@@ -43,6 +43,9 @@
     dest: "/usr/bin/"
     mode: 0755
 
+- name: Validate RHV host -- RHV version requirement
+  command: /usr/bin/virt-v2v-wrapper.py --check-rhv-version
+
 - name: Look for SSH key
   stat:
     path: "~vdsm/.ssh/id_rsa"

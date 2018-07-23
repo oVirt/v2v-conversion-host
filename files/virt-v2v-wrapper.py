@@ -40,12 +40,14 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "6"
+VERSION = "6.1"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
 TIMEOUT = 300
 VDSM_LOG_DIR = '/var/log/vdsm/import'
+VDSM_MIN_RHV = '4.2.4'  # This has to match VDSM_MIN_VERSION!
+VDSM_MIN_VERSION = '4.20.31'  # RC4, final
 VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
 VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
@@ -613,7 +615,41 @@ def handle_cleanup(data, state):
 
 
 ###########
+# Checks
+
+def check_rhv_version():
+    import rpmUtils.transaction
+    import rpmUtils.miscutils
+
+    ts = rpmUtils.transaction.initReadOnlyTransaction()
+    match = ts.dbMatch('name', 'vdsm')
+    if len(match) >= 1:
+        vdsm = match.next()
+        res = rpmUtils.miscutils.compareEVR(
+            (vdsm['epoch'], vdsm['version'], None),  # Ignore release number
+            rpmUtils.miscutils.stringToVersion(VDSM_MIN_VERSION))
+        return (res >= 0)
+    print('Minimal required oVirt/RHV version is %s' % VDSM_MIN_RHV)
+    return False
+
+
+CHECKS = {
+    'rhv-version': check_rhv_version,
+}
+
+###########
+
 if len(sys.argv) > 1:
+    if sys.argv[1] == '--checks':
+        for check in CHECKS.keys():
+            print("%s" % check)
+        sys.exit(0)
+    if sys.argv[1][:8] == '--check-':
+        check = CHECKS.get(sys.argv[1][8:])
+        if check is not None and check():
+            sys.exit(0)
+        else:
+            sys.exit(1)
     if sys.argv[1] == '--version':
         print('virt-v2v-wrapper %s' % VERSION)
         sys.exit(0)
