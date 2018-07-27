@@ -40,7 +40,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "6.2"
+VERSION = "6.3"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -652,246 +652,262 @@ CHECKS = {
 
 ###########
 
-if len(sys.argv) > 1:
-    if sys.argv[1] == '--checks':
-        for check in CHECKS.keys():
-            print("%s" % check)
-        sys.exit(0)
-    if sys.argv[1][:8] == '--check-':
-        check = CHECKS.get(sys.argv[1][8:])
-        if check is not None and check():
+
+def main():
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '--checks':
+            for check in CHECKS.keys():
+                print("%s" % check)
             sys.exit(0)
-        else:
-            sys.exit(1)
-    if sys.argv[1] == '--version':
-        print('virt-v2v-wrapper %s' % VERSION)
-        sys.exit(0)
+        if sys.argv[1][:8] == '--check-':
+            check = CHECKS.get(sys.argv[1][8:])
+            if check is not None and check():
+                sys.exit(0)
+            else:
+                sys.exit(1)
+        if sys.argv[1] == '--version':
+            print('virt-v2v-wrapper %s' % VERSION)
+            sys.exit(0)
 
+    # Read and parse input -- hopefully this should be safe to do as root
+    data = json.load(sys.stdin)
 
-# Read and parse input -- hopefully this should be safe to do as root
-data = json.load(sys.stdin)
+    # Take the defaults
+    vdsm = VDSM
+    direct_backend = DIRECT_BACKEND
 
-# NOTE: this is just pre-check to find out whether we can run as vdsm user at
-# all. This is not validation of the input data!
-if 'export_domain' in data:
-    # Need to be root to mount NFS share
-    VDSM = False
-    # Cannot use libvirt backend as root on VDSM host due to permissions
-    DIRECT_BACKEND = True
+    # NOTE: this is just pre-check to find out whether we can run as vdsm user
+    # at all. This is not validation of the input data!
+    if 'export_domain' in data:
+        # Need to be root to mount NFS share
+        vdsm = False
+        # Cannot use libvirt backend as root on VDSM host due to permissions
+        direct_backend = True
 
-if VDSM:
-    make_vdsm(data)
+    if vdsm:
+        make_vdsm(data)
 
-if DIRECT_BACKEND:
-    data['backend'] = 'direct'
+    if direct_backend:
+        data['backend'] = 'direct'
 
-# The logging is delayed after we now which user runs the wrapper. Otherwise we
-# would have two logs.
-log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
-v2v_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s.log' % log_tag)
-wrapper_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s-wrapper.log' % log_tag)
-state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
+    # The logging is delayed after we now which user runs the wrapper.
+    # Otherwise we would have two logs.
+    log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
+    v2v_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s.log' % log_tag)
+    wrapper_log = os.path.join(VDSM_LOG_DIR,
+                               'v2v-import-%s-wrapper.log' % log_tag)
+    state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
 
-logging.basicConfig(
-    level=LOG_LEVEL,
-    filename=wrapper_log,
-    format='%(asctime)s:%(levelname)s: %(message)s (%(module)s:%(lineno)d)')
+    log_format = '%(asctime)s:%(levelname)s:' \
+        + ' %(message)s (%(module)s:%(lineno)d)'
+    logging.basicConfig(
+        level=LOG_LEVEL,
+        filename=wrapper_log,
+        format=log_format)
 
-logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
+    logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
-logging.info('Will store virt-v2v log in: %s', v2v_log)
-logging.info('Will store state file in: %s', state_file)
+    logging.info('Will store virt-v2v log in: %s', v2v_log)
+    logging.info('Will store state file in: %s', state_file)
 
-password_files = []
+    password_files = []
 
-try:
-    # Make sure all the needed keys are in data. This is rather poor
-    # validation, but...
-    if 'vm_name' not in data:
-            error('Missing vm_name')
-
-    # Output file format (raw or qcow2)
-    if 'output_format' in data:
-        if data['output_format'] not in ('raw', 'qcow2'):
-            error('Invalid output format %r, expected raw or qcow2' %
-                  data['output_format'])
-    else:
-        data['output_format'] = 'raw'
-
-    # Transports (only VDDK for now)
-    if 'transport_method' not in data:
-        error('No transport method specified')
-    if data['transport_method'] not in ('ssh', 'vddk'):
-        error('Unknown transport method: %s', data['transport_method'])
-
-    if data['transport_method'] == 'vddk':
-        for k in [
-                'vmware_fingerprint',
-                'vmware_uri',
-                'vmware_password',
-                ]:
-            if k not in data:
-                error('Missing argument: %s' % k)
-
-    # Targets (only export domain for now)
-    if 'rhv_url' in data:
-        for k in [
-                'rhv_cluster',
-                'rhv_password',
-                'rhv_storage',
-                ]:
-            if k not in data:
-                error('Missing argument: %s' % k)
-        if 'rhv_cafile' not in data:
-            logging.info('Path to CA certificate not specified,'
-                         ' trying VDSM default: %s', VDSM_CA)
-            data['rhv_cafile'] = VDSM_CA
-    elif 'export_domain' in data:
-        pass
-    else:
-        error('No target specified')
-
-    # Network mappings
-    if 'network_mappings' in data:
-        if isinstance(data['network_mappings'], list):
-            for mapping in data['network_mappings']:
-                if not all(k in mapping for k in ("source", "destination")):
-                    error("Both 'source' and 'destination' must be provided"
-                          + " in network mapping")
-        else:
-            error("'network_mappings' must be an array")
-
-    # Virtio drivers
-    if 'virtio_win' in data:
-        # This is for backward compatibility
-        data['install_drivers'] = True
-    if 'install_drivers' in data:
-        check_install_drivers(data)
-    else:
-        data['install_drivers'] = False
-
-    # Insecure connection
-    if 'insecure_connection' not in data:
-        data['insecure_connection'] = False
-    if data['insecure_connection']:
-        logging.info('SSL verification is disabled for oVirt SDK connections')
-
-    # Allocation type
-    if 'allocation' in data:
-        if data['allocation'] not in ('preallocated', 'sparse'):
-            error('Invalid value for allocation type: %r' % data['allocation'])
-    else:
-        # Check storage domain type and decide on suitable allocation type
-        # Note: This is only temporary. We should get the info from the caller
-        # in the future.
-        domain_type = None
-        with sdk_connection(data) as c:
-            service = c.system_service().storage_domains_service()
-            domains = service.list(search='name="%s"' %
-                                   str(data['rhv_storage']))
-            if len(domains) != 1:
-                error('Found %d domains matching "%s"!' %
-                      (len(domains), data['rhv_storage']))
-            domain_type = domains[0].storage.type
-        logging.info('Storage domain "%s" is of type %r', data['rhv_storage'],
-                     domain_type)
-        data['allocation'] = 'sparse'
-        if domain_type in PREALLOCATED_STORAGE_TYPES:
-            data['allocation'] = 'preallocated'
-        logging.info('... selected allocation type is %s', data['allocation'])
-
-    #
-    # NOTE: don't use error() beyond this point!
-    #
-
-    # Store password(s)
-    logging.info('Writing password file(s)')
-    if 'vmware_password' in data:
-        data['vmware_password_file'] = write_password(data['vmware_password'],
-                                                      password_files)
-    if 'rhv_password' in data:
-        data['rhv_password_file'] = write_password(data['rhv_password'],
-                                                   password_files)
-    if 'ssh_key' in data:
-        data['ssh_key_file'] = write_password(data['ssh_key'],
-                                              password_files)
-
-    # Create state file before dumping the JSON
-    state = {
-            'disks': [],
-            'internal': {
-                'disk_ids': {},
-                'state_file': state_file,
-                },
-            }
     try:
-        if 'source_disks' in data:
-            logging.debug('Initializing disk list from %r',
-                          data['source_disks'])
-            for d in data['source_disks']:
-                state['disks'].append({
-                    'path': d,
-                    'progress': 0})
-            state['disk_count'] = len(data['source_disks'])
+        # Make sure all the needed keys are in data. This is rather poor
+        # validation, but...
+        if 'vm_name' not in data:
+                error('Missing vm_name')
+
+        # Output file format (raw or qcow2)
+        if 'output_format' in data:
+            if data['output_format'] not in ('raw', 'qcow2'):
+                error('Invalid output format %r, expected raw or qcow2' %
+                      data['output_format'])
+        else:
+            data['output_format'] = 'raw'
+
+        # Transports (only VDDK for now)
+        if 'transport_method' not in data:
+            error('No transport method specified')
+        if data['transport_method'] not in ('ssh', 'vddk'):
+            error('Unknown transport method: %s', data['transport_method'])
+
+        if data['transport_method'] == 'vddk':
+            for k in [
+                    'vmware_fingerprint',
+                    'vmware_uri',
+                    'vmware_password',
+                    ]:
+                if k not in data:
+                    error('Missing argument: %s' % k)
+
+        # Targets (only export domain for now)
+        if 'rhv_url' in data:
+            for k in [
+                    'rhv_cluster',
+                    'rhv_password',
+                    'rhv_storage',
+                    ]:
+                if k not in data:
+                    error('Missing argument: %s' % k)
+            if 'rhv_cafile' not in data:
+                logging.info('Path to CA certificate not specified,'
+                             ' trying VDSM default: %s', VDSM_CA)
+                data['rhv_cafile'] = VDSM_CA
+        elif 'export_domain' in data:
+            pass
+        else:
+            error('No target specified')
+
+        # Network mappings
+        if 'network_mappings' in data:
+            if isinstance(data['network_mappings'], list):
+                for mapping in data['network_mappings']:
+                    if not all(
+                            k in mapping for k in ("source", "destination")):
+                        error("Both 'source' and 'destination'"
+                              " must be provided in network mapping")
+            else:
+                error("'network_mappings' must be an array")
+
+        # Virtio drivers
+        if 'virtio_win' in data:
+            # This is for backward compatibility
+            data['install_drivers'] = True
+        if 'install_drivers' in data:
+            check_install_drivers(data)
+        else:
+            data['install_drivers'] = False
+
+        # Insecure connection
+        if 'insecure_connection' not in data:
+            data['insecure_connection'] = False
+        if data['insecure_connection']:
+            logging.info(
+                'SSL verification is disabled for oVirt SDK connections')
+
+        # Allocation type
+        if 'allocation' in data:
+            if data['allocation'] not in ('preallocated', 'sparse'):
+                error('Invalid value for allocation type: %r' %
+                      data['allocation'])
+        else:
+            # Check storage domain type and decide on suitable allocation type
+            # Note: This is only temporary. We should get the info from the
+            # caller in the future.
+            domain_type = None
+            with sdk_connection(data) as c:
+                service = c.system_service().storage_domains_service()
+                domains = service.list(search='name="%s"' %
+                                       str(data['rhv_storage']))
+                if len(domains) != 1:
+                    error('Found %d domains matching "%s"!' %
+                          (len(domains), data['rhv_storage']))
+                domain_type = domains[0].storage.type
+            logging.info('Storage domain "%s" is of type %r',
+                         data['rhv_storage'], domain_type)
+            data['allocation'] = 'sparse'
+            if domain_type in PREALLOCATED_STORAGE_TYPES:
+                data['allocation'] = 'preallocated'
+            logging.info('... selected allocation type is %s',
+                         data['allocation'])
+
+        #
+        # NOTE: don't use error() beyond this point!
+        #
+
+        # Store password(s)
+        logging.info('Writing password file(s)')
+        if 'vmware_password' in data:
+            data['vmware_password_file'] = write_password(
+                    data['vmware_password'], password_files)
+        if 'rhv_password' in data:
+            data['rhv_password_file'] = write_password(data['rhv_password'],
+                                                       password_files)
+        if 'ssh_key' in data:
+            data['ssh_key_file'] = write_password(data['ssh_key'],
+                                                  password_files)
+
+        # Create state file before dumping the JSON
+        state = {
+                'disks': [],
+                'internal': {
+                    'disk_ids': {},
+                    'state_file': state_file,
+                    },
+                }
+        try:
+            if 'source_disks' in data:
+                logging.debug('Initializing disk list from %r',
+                              data['source_disks'])
+                for d in data['source_disks']:
+                    state['disks'].append({
+                        'path': d,
+                        'progress': 0})
+                state['disk_count'] = len(data['source_disks'])
+            write_state(state)
+
+            # Send some useful info on stdout in JSON
+            print(json.dumps({
+                'v2v_log': v2v_log,
+                'wrapper_log': wrapper_log,
+                'state_file': state_file,
+            }))
+
+            # Let's get to work
+            logging.info('Daemonizing')
+            daemonize()
+            agent_pid = None
+            agent_sock = None
+            if data['transport_method'] == 'ssh':
+                agent_pid, agent_sock = spawn_ssh_agent(data)
+                if agent_pid is None:
+                    raise RuntimeError('Failed to start ssh-agent')
+            wrapper(data, state, v2v_log, agent_sock)
+            if agent_pid is not None:
+                os.kill(agent_pid, signal.SIGTERM)
+
+        except Exception:
+            # No need to log the exception, it will get logged below
+            logging.error('An error occured, finishing state file...')
+            state['failed'] = True
+            write_state(state)
+            raise
+        finally:
+            if 'failed' in state:
+                # Perform cleanup after failed conversion
+                logging.debug('Cleanup phase')
+                try:
+                    handle_cleanup(data, state)
+                finally:
+                    state['finished'] = True
+                    write_state(state)
+
+        # Remove password files
+        logging.info('Removing password files')
+        for f in password_files:
+            try:
+                os.remove(f)
+            except OSError:
+                logging.exception('Error while removing password file: %s' % f)
+
+        state['finished'] = True
         write_state(state)
-
-        # Send some useful info on stdout in JSON
-        print(json.dumps({
-            'v2v_log': v2v_log,
-            'wrapper_log': wrapper_log,
-            'state_file': state_file,
-        }))
-
-        # Let's get to work
-        logging.info('Daemonizing')
-        daemonize()
-        agent_pid = None
-        agent_sock = None
-        if data['transport_method'] == 'ssh':
-            agent_pid, agent_sock = spawn_ssh_agent(data)
-            if agent_pid is None:
-                raise RuntimeError('Failed to start ssh-agent')
-        wrapper(data, state, v2v_log, agent_sock)
-        if agent_pid is not None:
-            os.kill(agent_pid, signal.SIGTERM)
 
     except Exception:
-        # No need to log the exception, it will get logged below
-        logging.error('An error occured, finishing state file...')
-        state['failed'] = True
-        write_state(state)
-        raise
-    finally:
-        if 'failed' in state:
-            # Perform cleanup after failed conversion
-            logging.debug('Cleanup phase')
+        logging.exception('Wrapper failure')
+        # Remove password files
+        logging.info('Removing password files')
+        for f in password_files:
             try:
-                handle_cleanup(data, state)
-            finally:
-                state['finished'] = True
-                write_state(state)
+                os.remove(f)
+            except OSError:
+                logging.exception('Error removing password file: %s' % f)
+        # Re-raise original error
+        raise
 
-    # Remove password files
-    logging.info('Removing password files')
-    for f in password_files:
-        try:
-            os.remove(f)
-        except OSError:
-            logging.exception('Error while removing password file: %s' % f)
+    logging.info('Finished')
 
-    state['finished'] = True
-    write_state(state)
 
-except Exception:
-    logging.exception('Wrapper failure')
-    # Remove password files
-    logging.info('Removing password files')
-    for f in password_files:
-        try:
-            os.remove(f)
-        except OSError:
-            logging.exception('Error removing password file: %s' % f)
-    # Re-raise original error
-    raise
-
-logging.info('Finished')
+if __name__ == '__main__':
+    main()
