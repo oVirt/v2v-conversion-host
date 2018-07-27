@@ -785,7 +785,8 @@ try:
             domains = service.list(search='name="%s"' %
                                    str(data['rhv_storage']))
             if len(domains) != 1:
-                error('Found %d domains matching "%s"!' % data['rhv_storage'])
+                error('Found %d domains matching "%s"!' %
+                      (len(domains), data['rhv_storage']))
             domain_type = domains[0].storage.type
         logging.info('Storage domain "%s" is of type %r', data['rhv_storage'],
                      domain_type)
