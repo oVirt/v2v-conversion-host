@@ -51,6 +51,7 @@ VDSM_MIN_VERSION = '4.20.31'  # RC4, final
 VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
 VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
+VIRT_V2V = '/usr/bin/virt-v2v'
 
 # For now there are limited possibilities in how we can select allocation type
 # and format. The best thing we can do now is to base the allocation on type of
@@ -357,9 +358,9 @@ def write_state(state):
         json.dump(state, f)
 
 
-def wrapper(data, state, v2v_log, agent_sock=None):
+def prepare_command(data, agent_sock):
     v2v_args = [
-        '/usr/bin/virt-v2v', '-v', '-x',
+        VIRT_V2V, '-v', '-x',
         data['vm_name'],
         '-of', data['output_format'],
         '--bridge', 'ovirtmgmt',
@@ -418,27 +419,34 @@ def wrapper(data, state, v2v_log, agent_sock=None):
                                 (mapping['source'], mapping['destination'])])
 
     # Prepare environment
-    env = os.environ.copy()
-    env['LANG'] = 'C'
+    v2v_env = os.environ.copy()
+    v2v_env['LANG'] = 'C'
     if 'backend' in data:
         if data['backend'] == 'direct':
             logging.debug('Using direct backend. Hack, hack...')
-        env['LIBGUESTFS_BACKEND'] = data['backend']
+        v2v_env['LIBGUESTFS_BACKEND'] = data['backend']
     if 'virtio_win' in data:
-        env['VIRTIO_WIN'] = data['virtio_win']
+        v2v_env['VIRTIO_WIN'] = data['virtio_win']
     if agent_sock is not None:
-        env['SSH_AUTH_SOCK'] = agent_sock
+        v2v_env['SSH_AUTH_SOCK'] = agent_sock
+
+    return (v2v_args, v2v_env)
+
+
+def wrapper(data, state, v2v_log, agent_sock=None):
+
+    v2v_args, v2v_env = prepare_command(data, agent_sock)
 
     proc = None
     with open(v2v_log, 'w') as log:
         logging.info('Starting virt-v2v as: %r, environment: %r',
-                     v2v_args, env)
+                     v2v_args, v2v_env)
         proc = subprocess.Popen(
                 v2v_args,
                 stdin=DEVNULL,
                 stderr=subprocess.STDOUT,
                 stdout=log,
-                env=env,
+                env=v2v_env,
                 )
 
     try:
