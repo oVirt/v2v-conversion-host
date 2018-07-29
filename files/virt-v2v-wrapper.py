@@ -176,61 +176,65 @@ class OutputParser(object):
         line = None
         while line != b'':
             line = self._log.readline()
-            m = self.COPY_DISK_RE.match(line)
-            if m is not None:
+            state = self.parse_line(state, line)
+        return state
+
+    def parse_line(self, state, line):
+        m = self.COPY_DISK_RE.match(line)
+        if m is not None:
+            try:
+                self._current_disk = int(m.group(1))-1
+                self._current_path = None
+                state['disk_count'] = int(m.group(2))
+                logging.info('Copying disk %d/%d',
+                             self._current_disk+1, state['disk_count'])
+                if state['disk_count'] != len(state['disks']):
+                    logging.warning(
+                        'Number of supplied disk paths (%d) does not match'
+                        ' number of disks in VM (%s)',
+                        len(state['disks']),
+                        state['disk_count'])
+            except ValueError:
+                logging.exception('Conversion error')
+
+        # VDDK
+        m = self.NBDKIT_DISK_PATH_RE.match(line)
+        if m is not None:
+            self._current_path = m.group(1).decode()
+            if self._current_disk is not None:
+                logging.info('Copying path: %s', self._current_path)
+                self._locate_disk(state)
+
+        # SSH
+        m = self.OVERLAY_SOURCE_RE.match(line)
+        if m is not None:
+            path = m.group(1).decode()
+            # Transform path to be raltive to storage
+            self._current_path = self.VMDK_PATH_RE.sub(
+                br'[\g<store>] \g<vm>/\g<disk>', path)
+            if self._current_disk is not None:
+                logging.info('Copying path: %s', self._current_path)
+                self._locate_disk(state)
+
+        m = self.DISK_PROGRESS_RE.match(line)
+        if m is not None:
+            if self._current_path is not None and \
+                    self._current_disk is not None:
                 try:
-                    self._current_disk = int(m.group(1))-1
-                    self._current_path = None
-                    state['disk_count'] = int(m.group(2))
-                    logging.info('Copying disk %d/%d',
-                                 self._current_disk+1, state['disk_count'])
-                    if state['disk_count'] != len(state['disks']):
-                        logging.warning(
-                            'Number of supplied disk paths (%d) does not match'
-                            ' number of disks in VM (%s)',
-                            len(state['disks']),
-                            state['disk_count'])
+                    state['disks'][self._current_disk]['progress'] = \
+                        float(m.group(1))
+                    logging.debug('Updated progress: %s', m.group(1))
                 except ValueError:
                     logging.exception('Conversion error')
+            else:
+                logging.debug('Skipping progress update for unknown disk')
 
-            # VDDK
-            m = self.NBDKIT_DISK_PATH_RE.match(line)
-            if m is not None:
-                self._current_path = m.group(1).decode()
-                if self._current_disk is not None:
-                    logging.info('Copying path: %s', self._current_path)
-                    self._locate_disk(state)
-
-            # SSH
-            m = self.OVERLAY_SOURCE_RE.match(line)
-            if m is not None:
-                path = m.group(1).decode()
-                # Transform path to be raltive to storage
-                self._current_path = self.VMDK_PATH_RE.sub(
-                    br'[\g<store>] \g<vm>/\g<disk>', path)
-                if self._current_disk is not None:
-                    logging.info('Copying path: %s', self._current_path)
-                    self._locate_disk(state)
-
-            m = self.DISK_PROGRESS_RE.match(line)
-            if m is not None:
-                if self._current_path is not None and \
-                        self._current_disk is not None:
-                    try:
-                        state['disks'][self._current_disk]['progress'] = \
-                            float(m.group(1))
-                        logging.debug('Updated progress: %s', m.group(1))
-                    except ValueError:
-                        logging.exception('Conversion error')
-                else:
-                    logging.debug('Skipping progress update for unknown disk')
-
-            m = self.RHV_DISK_UUID.match(line)
-            if m is not None:
-                path = state['disks'][self._current_disk]['path']
-                disk_id = m.group('uuid')
-                state['internal']['disk_ids'][path] = disk_id
-                logging.debug('Path \'%s\' has disk id=\'%s\'', path, disk_id)
+        m = self.RHV_DISK_UUID.match(line)
+        if m is not None:
+            path = state['disks'][self._current_disk]['path']
+            disk_id = m.group('uuid')
+            state['internal']['disk_ids'][path] = disk_id
+            logging.debug('Path \'%s\' has disk id=\'%s\'', path, disk_id)
         return state
 
     def close(self):
