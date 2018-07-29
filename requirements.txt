@@ -1,1 +1,2 @@
-ansible
+ovirt-engine-sdk-python
+pycurl
