@@ -350,6 +350,7 @@ def find_iso_domain():
 
 
 def write_state(state):
+    state_file = state['internal']['state_file']
     state = state.copy()
     del state['internal']
     with open(state_file, 'w') as f:
@@ -419,9 +420,10 @@ def wrapper(data, state, v2v_log, agent_sock=None):
     # Prepare environment
     env = os.environ.copy()
     env['LANG'] = 'C'
-    if DIRECT_BACKEND:
-        logging.debug('Using direct backend. Hack, hack...')
-        env['LIBGUESTFS_BACKEND'] = 'direct'
+    if 'backend' in data:
+        if data['backend'] == 'direct':
+            logging.debug('Using direct backend. Hack, hack...')
+        env['LIBGUESTFS_BACKEND'] = data['backend']
     if 'virtio_win' in data:
         env['VIRTIO_WIN'] = data['virtio_win']
     if agent_sock is not None:
@@ -680,6 +682,9 @@ if 'export_domain' in data:
 if VDSM:
     make_vdsm(data)
 
+if DIRECT_BACKEND:
+    data['backend'] = 'direct'
+
 # The logging is delayed after we now which user runs the wrapper. Otherwise we
 # would have two logs.
 log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
@@ -816,6 +821,7 @@ try:
             'disks': [],
             'internal': {
                 'disk_ids': {},
+                'state_file': state_file,
                 },
             }
     try:
