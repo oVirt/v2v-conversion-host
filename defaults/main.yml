@@ -5,3 +5,4 @@ v2v_vddk_override: false
 v2v_vddk_install_dir: /opt
 v2v_build_dir: /tmp/nbdkit-plugin
 v2v_yum_check: latest
+v2v_host_type: rhv

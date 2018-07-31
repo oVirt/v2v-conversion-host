@@ -51,33 +51,11 @@
     state: "{{ v2v_yum_check }}"
     name: virt-v2v
 
-- name: Install oVirt SDK
-  yum:
-    state: "{{ v2v_yum_check }}"
-    name: python-ovirt-engine-sdk4
-
 - name: Install virt-v2v wrapper
   copy:
     src: "virt-v2v-wrapper.py"
     dest: "/usr/bin/"
     mode: 0755
 
-- name: Validate RHV host -- RHV version requirement
-  command: /usr/bin/virt-v2v-wrapper.py --check-rhv-version
-  when: v2v_checks_override is not defined or not v2v_checks_override
-
-- name: Validate RHV host -- RHV Guest Tools
-  command: /usr/bin/virt-v2v-wrapper.py --check-rhv-guest-tools
-  when: v2v_checks_override is not defined or not v2v_checks_override
-
-- name: Look for SSH key
-  stat:
-    path: "~vdsm/.ssh/id_rsa"
-  ignore_errors: "yes"
-  register: stat_ssh_key
-
-- name: Create SSH key
-  command: ssh-keygen -b 4096 -t rsa -f ~vdsm/.ssh/id_rsa -N ''
-  become: true
-  become_user: vdsm
-  when: not stat_ssh_key.stat.exists
+- include_task: "validate-{{v2v_host_type}}.yml"
+- include_task: "install-{{v2v_host_type}}.yml"
