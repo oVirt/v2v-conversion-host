@@ -502,7 +502,10 @@ def spawn_ssh_agent(data):
         agent_pid = int(pid.group(1))
         logging.info('SSH Agent started with PID %d', agent_pid)
     except subprocess.CalledProcessError:
-        logging.error('Failed to start ssh-agent')
+        logging.exception('Failed to start ssh-agent')
+        return None, None
+    except ValueError:
+        logging.excepton('Failed to parse ssh-agent output')
         return None, None
     env = os.environ.copy()
     env['SSH_AUTH_SOCK'] = agent_sock
