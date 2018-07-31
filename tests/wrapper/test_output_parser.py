@@ -7,12 +7,12 @@ class TestOutputParser(unittest.TestCase):
     def test_disk_number(self):
         with wrapper.log_parser('/dev/null') as parser:
             parser._current_disk = 0
-            parser._current_path = '/path1'
+            parser._current_path = b'/path1'
             state = {
                 'disks': [
-                    {'path': '[store1] path1.vmdk'},
-                    {'path': '[store1] path2.vmdk'},
-                    {'path': '[store1] path3.vmdk'},
+                    {'path': b'[store1] path1.vmdk'},
+                    {'path': b'[store1] path2.vmdk'},
+                    {'path': b'[store1] path3.vmdk'},
                     ],
                 }
             state = parser.parse_line(
@@ -25,26 +25,26 @@ class TestOutputParser(unittest.TestCase):
     def test_locate_disk(self):
         with wrapper.log_parser('/dev/null') as parser:
             parser._current_disk = 0
-            parser._current_path = '[store1] path1.vmdk'
+            parser._current_path = b'[store1] path1.vmdk'
             state = {
                 'disks': [
-                    {'path': '[store1] path2.vmdk'},
-                    {'path': '[store1] path1.vmdk'},
-                    {'path': '[store1] path3.vmdk'},
+                    {'path': b'[store1] path2.vmdk'},
+                    {'path': b'[store1] path1.vmdk'},
+                    {'path': b'[store1] path3.vmdk'},
                     ],
                 }
             parser._locate_disk(state)
-            self.assertEqual(state['disks'][0]['path'], '[store1] path1.vmdk')
-            self.assertEqual(state['disks'][1]['path'], '[store1] path2.vmdk')
-            self.assertEqual(state['disks'][2]['path'], '[store1] path3.vmdk')
+            self.assertEqual(state['disks'][0]['path'], b'[store1] path1.vmdk')
+            self.assertEqual(state['disks'][1]['path'], b'[store1] path2.vmdk')
+            self.assertEqual(state['disks'][2]['path'], b'[store1] path3.vmdk')
 
     def test_progress(self):
         with wrapper.log_parser('/dev/null') as parser:
             parser._current_disk = 0
-            parser._current_path = '/path1'
+            parser._current_path = b'/path1'
             state = {
                 'disks': [{
-                    'path': '/path1',
+                    'path': b'/path1',
                     'progress': 0.0,
                     }],
                 }
@@ -68,14 +68,15 @@ class TestOutputParser(unittest.TestCase):
             state = parser.parse_line(
                 state,
                 b'nbdkit: debug: Opening file [store1] /path1.vmdk (ha-nfcssl://[store1] path1.vmdk@1.2.3.4:902)')  # NOQA
-            self.assertEqual(parser._current_path, '[store1] /path1.vmdk')
+            self.assertEqual(parser._current_path, b'[store1] /path1.vmdk')
 
     def test_rhv_disk_uuid(self):
         with wrapper.log_parser('/dev/null') as parser:
             parser._current_disk = 0
+            path = b'/path1'
             state = {
                 'disks': [{
-                    'path': '/path1',
+                    'path': path,
                     }],
                 'internal': {
                     'disk_ids': {
@@ -85,7 +86,7 @@ class TestOutputParser(unittest.TestCase):
             state = parser.parse_line(
                 state,
                 b'disk.id = \'11111111-1111-1111-1111-111111111111\'')
-            self.assertIn('/path1', state['internal']['disk_ids'])
+            self.assertIn(path, state['internal']['disk_ids'])
             self.assertEqual(
-                state['internal']['disk_ids']['/path1'],
+                state['internal']['disk_ids'][path],
                 b'11111111-1111-1111-1111-111111111111')

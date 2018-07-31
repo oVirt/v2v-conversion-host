@@ -200,7 +200,7 @@ class OutputParser(object):
         # VDDK
         m = self.NBDKIT_DISK_PATH_RE.match(line)
         if m is not None:
-            self._current_path = m.group(1).decode()
+            self._current_path = m.group(1)
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
@@ -208,7 +208,7 @@ class OutputParser(object):
         # SSH
         m = self.OVERLAY_SOURCE_RE.match(line)
         if m is not None:
-            path = m.group(1).decode()
+            path = m.group(1)
             # Transform path to be raltive to storage
             self._current_path = self.VMDK_PATH_RE.sub(
                 br'[\g<store>] \g<vm>/\g<disk>', path)
@@ -498,7 +498,7 @@ def spawn_ssh_agent(data):
                 'Incomplete match of ssh-agent output; sock=%r; pid=%r',
                 sock, pid)
             return None, None
-        agent_sock = sock.group(1).decode()
+        agent_sock = sock.group(1)
         agent_pid = int(pid.group(1))
         logging.info('SSH Agent started with PID %d', agent_pid)
     except subprocess.CalledProcessError:
@@ -856,9 +856,13 @@ def main():
                 logging.debug('Initializing disk list from %r',
                               data['source_disks'])
                 for d in data['source_disks']:
+                    # NOTE: We expect names from virt-v2v/VMware to be UTF-8
+                    # encoded. Encoding them here is safer than decoding the
+                    # virt-v2v output.
                     state['disks'].append({
-                        'path': d,
+                        'path': d.encode('utf-8'),
                         'progress': 0})
+                logging.debug('Internal disk list: %r', state['disks'])
                 state['disk_count'] = len(data['source_disks'])
             write_state(state)
 
