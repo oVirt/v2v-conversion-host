@@ -41,6 +41,17 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Wed Aug  1 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.0-1
+- Wrapper changes:
+  - Fixed issues with handling of UTF-8 names
+  - Added check for existance of guest tools ISO
+  - Added check for minimal oVirt/RHV version
+  - Added --vesrion option
+  - Added support for virt-v2v --mac option
+- Roles changes:
+  - VDDK package URL is optional
+  - Added checks for RHV version and existence of ISO with guest tools
+
 * Sun Jul  1 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.5.0-1
 - wrapper changes:
   - clean disks on conversion failure
