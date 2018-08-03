@@ -362,7 +362,7 @@ def write_state(state):
         json.dump(state, f)
 
 
-def prepare_command(data, agent_sock):
+def prepare_command(data, v2v_caps, agent_sock=None):
     v2v_args = [
         VIRT_V2V, '-v', '-x',
         data['vm_name'],
@@ -414,7 +414,7 @@ def prepare_command(data, agent_sock):
 
     if 'network_mappings' in data:
         for mapping in data['network_mappings']:
-            if 'mac_address' in mapping:
+            if 'mac_address' in mapping and 'mac-option' in v2v_caps:
                 v2v_args.extend(['--mac', '%s:bridge:%s' %
                                 (mapping['mac_address'],
                                     mapping['destination'])])
@@ -437,9 +437,9 @@ def prepare_command(data, agent_sock):
     return (v2v_args, v2v_env)
 
 
-def wrapper(data, state, v2v_log, agent_sock=None):
+def wrapper(data, state, v2v_log, v2v_caps, agent_sock=None):
 
-    v2v_args, v2v_env = prepare_command(data, agent_sock)
+    v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
 
     proc = None
     with open(v2v_log, 'w') as log:
@@ -505,7 +505,7 @@ def spawn_ssh_agent(data):
         logging.exception('Failed to start ssh-agent')
         return None, None
     except ValueError:
-        logging.excepton('Failed to parse ssh-agent output')
+        logging.exception('Failed to parse ssh-agent output')
         return None, None
     env = os.environ.copy()
     env['SSH_AUTH_SOCK'] = agent_sock
@@ -585,6 +585,15 @@ def check_install_drivers(data):
               "ISO domain")
     data['virtio_win'] = full_path
     logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+
+def virt_v2v_capabilities():
+    try:
+        return subprocess.check_output(['virt-v2v', u'--machine-readable']) \
+                         .split('\n')
+    except subprocess.CalledProcessError:
+        logging.exception('Failed to start virt-v2v')
+        return None
 
 
 def handle_cleanup(data, state):
@@ -726,6 +735,12 @@ def main():
     logging.info('Will store state file in: %s', state_file)
 
     password_files = []
+
+    # Collect virt-v2v capabilities
+    virt_v2v_caps = virt_v2v_capabilities()
+    if virt_v2v_caps is None:
+        error('Could not get virt-v2v capabilities.')
+    logging.debug("virt-v2v capabilities: %r" % virt_v2v_caps)
 
     try:
         # Make sure all the needed keys are in data. This is rather poor
@@ -882,7 +897,7 @@ def main():
                 agent_pid, agent_sock = spawn_ssh_agent(data)
                 if agent_pid is None:
                     raise RuntimeError('Failed to start ssh-agent')
-            wrapper(data, state, v2v_log, agent_sock)
+            wrapper(data, state, v2v_log, virt_v2v_caps, agent_sock)
             if agent_pid is not None:
                 os.kill(agent_pid, signal.SIGTERM)
 

@@ -70,7 +70,7 @@ class TestV2vArgs(unittest.TestCase):
             '-oo', 'rhv-direct',
         ]
 
-        v2v_args, v2v_env = wrapper.prepare_command(data, None)
+        v2v_args, v2v_env = wrapper.prepare_command(data, [])
         self.assertEqual(v2v_args, expected)
 
     def test_network_mappings(self):
@@ -90,7 +90,7 @@ class TestV2vArgs(unittest.TestCase):
                 'mac_address': '01:23:45:67:89:AB',
             },
         ]
-        v2v_args, v2v_env = wrapper.prepare_command(data, None)
+        v2v_args, v2v_env = wrapper.prepare_command(data, ["mac-option"])
         self.assertHasArgs(
             v2v_args,
             ['--bridge', 'src_net_1:dst_net_1'],
