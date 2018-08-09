@@ -549,10 +549,11 @@ def filter_iso_names(iso_domain, isos):
             version = m.group(1)
             logging.debug('Matched ISO %r (priority %d)', fname, priority)
             if best_version is None or \
-                    (best_version < version and
-                        best_priority <= priority):
+                    best_priority < priority or \
+                    (best_version < version and best_priority == priority):
                 best_name = fname
                 best_version = version
+                best_priority = priority
 
     return best_name
 
