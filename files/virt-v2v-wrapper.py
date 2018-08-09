@@ -524,6 +524,39 @@ def spawn_ssh_agent(data):
     return agent_pid, agent_sock
 
 
+def filter_iso_names(iso_domain, isos):
+    """ @isos is a list of file names or an iterator """
+    # (priority, pattern)
+    patterns = [
+        (4, br'RHV-toolsSetup_([0-9._]+)\.iso'),
+        (3, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
+        (2, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
+        (1, br'virtio-win-([0-9.]+).iso'),
+        ]
+    patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
+                for p in patterns]
+    best_name = None
+    best_version = None
+    best_priority = -1
+
+    for fname in isos:
+        if not os.path.isfile(os.path.join(iso_domain, fname)):
+            continue
+        for priority, pat in patterns:
+            m = pat.match(fname)
+            if not m:
+                continue
+            version = m.group(1)
+            logging.debug('Matched ISO %r (priority %d)', fname, priority)
+            if best_version is None or \
+                    (best_version < version and
+                        best_priority <= priority):
+                best_name = fname
+                best_version = version
+
+    return best_name
+
+
 def check_install_drivers(data):
     if 'virtio_win' in data and os.path.isabs(data['virtio_win']):
         full_path = data['virtio_win']
@@ -542,34 +575,7 @@ def check_install_drivers(data):
                 data['install_drivers'] = False
                 return
 
-            # (priority, pattern)
-            patterns = [
-                (4, br'RHV-toolsSetup_([0-9._]+)\.iso'),
-                (3, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
-                (2, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
-                (1, br'virtio-win-([0-9.]+).iso'),
-                ]
-            patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
-                        for p in patterns]
-            best_name = None
-            best_version = None
-            best_priority = -1
-            for fname in os.listdir(iso_domain):
-                if not os.path.isfile(os.path.join(iso_domain, fname)):
-                    continue
-                for priority, pat in patterns:
-                    m = pat.match(fname)
-                    if not m:
-                        continue
-                    version = m.group(1)
-                    logging.debug('Matched ISO %r (priority %d)',
-                                  fname, priority)
-                    if best_version is None or \
-                            (best_version < version and
-                             best_priority <= priority):
-                        best_name = fname
-                        best_version = version
-
+            best_name = filter_iso_names(iso_domain, os.listdir(iso_domain))
             if best_name is None:
                 # Nothing found, this is not an error
                 logging.warn('Could not find any ISO with drivers' +
