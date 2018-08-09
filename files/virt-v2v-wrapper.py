@@ -40,7 +40,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "7"
+VERSION = "7.1"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -528,10 +528,14 @@ def filter_iso_names(iso_domain, isos):
     """ @isos is a list of file names or an iterator """
     # (priority, pattern)
     patterns = [
-        (4, br'RHV-toolsSetup_([0-9._]+)\.iso'),
-        (3, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
-        (2, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
+        (7, br'RHV-toolsSetup_([0-9._]+)\.iso'),
+        (6, br'rhv-tools-setup\.iso'),
+        (5, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
+        (4, br'rhev-tools-setup\.iso'),
+        (3, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
+        (2, br'ovirt-tools-setup\.iso'),
         (1, br'virtio-win-([0-9.]+).iso'),
+        (0, br'virtio-win\.iso'),
         ]
     patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
                 for p in patterns]
@@ -546,7 +550,10 @@ def filter_iso_names(iso_domain, isos):
             m = pat.match(fname)
             if not m:
                 continue
-            version = m.group(1)
+            if len(m.groups()) == 0:
+                version = b''
+            else:
+                version = m.group(1)
             logging.debug('Matched ISO %r (priority %d)', fname, priority)
             if best_version is None or \
                     best_priority < priority or \

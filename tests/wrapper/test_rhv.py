@@ -21,6 +21,7 @@ class TestRHV(unittest.TestCase):
                     b'virtio-win-123.iso',
                     b'b.iso',
                     ]))
+        # Priority
         self.assertEqual(
                 b'RHEV-toolsSetup_123.iso',
                 wrapper.filter_iso_names(b'/', [
@@ -46,4 +47,24 @@ class TestRHV(unittest.TestCase):
                     b'RHEV-toolsSetup_234.iso',
                     b'virtio-win-123.iso',
                     b'RHEV-toolsSetup_123.iso',
+                    ]))
+        self.assertEqual(
+                b'rhv-tools-setup.iso',
+                wrapper.filter_iso_names(b'/', [
+                    b'rhv-tools-setup.iso',
+                    b'virtio-win-123.iso',
+                    ]))
+        # Version
+        self.assertEqual(
+                b'RHEV-toolsSetup_4.0_3.iso',
+                wrapper.filter_iso_names(b'/', [
+                    b'RHEV-toolsSetup_4.0_3.iso',
+                    b'RHEV-toolsSetup_4.0_2.iso',
+                    ]))
+
+        self.assertEqual(
+                b'RHEV-toolsSetup_4.1_3.iso',
+                wrapper.filter_iso_names(b'/', [
+                    b'RHEV-toolsSetup_4.0_3.iso',
+                    b'RHEV-toolsSetup_4.1_3.iso',
                     ]))
