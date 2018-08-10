@@ -41,6 +41,14 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Fri Aug 10 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.1-1
+- Wrapper fixes:
+  - fixed problem with incorrect disk paths when using SSH transport
+  - accept more names of guest tools ISOs
+  - fix incorrect ordering of guest tools ISOs
+  - add check for virt-v2v capabilities to prevent MAC address based network
+    mapping from failing migration
+
 * Wed Aug  1 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.0-1
 - Wrapper changes:
   - Fixed issues with handling of UTF-8 names
