@@ -163,8 +163,8 @@ class OutputParser(object):
     OVERLAY_SOURCE_RE = re.compile(
         br' *overlay source qemu URI: json:.*"file\.path": ?"([^"]+)"')
     VMDK_PATH_RE = re.compile(
-            br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
-            + br'(?P<disk>.*)(-flat)?\.vmdk')
+        br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
+        br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
 
     def __init__(self, v2v_log):
