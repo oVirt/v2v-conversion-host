@@ -211,7 +211,7 @@ class OutputParser(object):
             path = m.group(1)
             # Transform path to be raltive to storage
             self._current_path = self.VMDK_PATH_RE.sub(
-                br'[\g<store>] \g<vm>/\g<disk>', path)
+                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path)
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
