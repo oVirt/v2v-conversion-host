@@ -45,12 +45,9 @@ VERSION = "8.1"
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
 TIMEOUT = 300
-VDSM_LOG_DIR = '/var/log/vdsm/import'
 VDSM_MIN_RHV = '4.2.4'  # This has to match VDSM_MIN_VERSION!
 VDSM_MIN_VERSION = '4.20.31'  # RC4, final
-VDSM_MOUNTS = '/rhev/data-center/mnt'
 VDSM_UID = 36
-VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
 VIRT_V2V = '/usr/bin/virt-v2v'
 
 # For now there are limited possibilities in how we can select allocation type
@@ -74,6 +71,158 @@ VDSM = True
 # - SSH transport method cannot be used with libvirt because it does not pass
 #   SSH_AUTH_SOCK env. variable to the QEMU process
 DIRECT_BACKEND = True
+
+
+class BaseHost(object):
+    TYPE_UNKNOWN = 'unknown'
+    TYPE_VDSM = 'vdsm'
+    TYPE = TYPE_UNKNOWN
+
+    def getLogs(self):
+        return ('/tmp', '/tmp')
+
+    def check_install_drivers(self, data):
+        error('cannot check_install_drivers for unknown host type')
+
+
+class VDSMHost(BaseHost):
+    """ Encapsulates data and methods specific to oVirt/RHV environment """
+    TYPE = BaseHost.TYPE_VDSM
+
+    TOOLS_PATTERNS = [
+        (7, br'RHV-toolsSetup_([0-9._]+)\.iso'),
+        (6, br'rhv-tools-setup\.iso'),
+        (5, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
+        (4, br'rhev-tools-setup\.iso'),
+        (3, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
+        (2, br'ovirt-tools-setup\.iso'),
+        (1, br'virtio-win-([0-9.]+).iso'),
+        (0, br'virtio-win\.iso'),
+        ]
+    VDSM_LOG_DIR = '/var/log/vdsm/import'
+    VDSM_MOUNTS = '/rhev/data-center/mnt'
+    VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
+
+    def getLogs(self):
+        """ Returns tuple with directory for virt-v2v log and wrapper log """
+        return (self.VDSM_LOG_DIR, self.VDSM_LOG_DIR)
+
+    def check_install_drivers(self, data):
+        """ Validate and/or find ISO with guest tools and drivers """
+        if 'virtio_win' in data and os.path.isabs(data['virtio_win']):
+            full_path = data['virtio_win']
+        else:
+            iso_domain = self._find_iso_domain()
+
+            iso_name = data.get('virtio_win')
+            if iso_name is not None:
+                if iso_domain is None:
+                    error('ISO domain not found')
+            else:
+                if iso_domain is None:
+                    # This is not an error
+                    logging.warning('ISO domain not found' +
+                                    ' (but install_drivers is true).')
+                    data['install_drivers'] = False
+                    return
+
+                best_name = self._filter_iso_names(
+                        iso_domain, os.listdir(iso_domain))
+                if best_name is None:
+                    # Nothing found, this is not an error
+                    logging.warn('Could not find any ISO with drivers' +
+                                 ' (but install_drivers is true).')
+                    data['install_drivers'] = False
+                    return
+                iso_name = best_name
+
+            full_path = os.path.join(iso_domain, iso_name)
+
+        if not os.path.isfile(full_path):
+            error("'virtio_win' must be a path or file name of image in "
+                  "ISO domain")
+        data['virtio_win'] = full_path
+        logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+    def _filter_iso_names(self, iso_domain, isos):
+        """ @isos is a list of file names or an iterator """
+        # (priority, pattern)
+        patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
+                    for p in self.TOOLS_PATTERNS]
+        best_name = None
+        best_version = None
+        best_priority = -1
+
+        for fname in isos:
+            if not os.path.isfile(os.path.join(iso_domain, fname)):
+                continue
+            for priority, pat in patterns:
+                m = pat.match(fname)
+                if not m:
+                    continue
+                if len(m.groups()) == 0:
+                    version = b''
+                else:
+                    version = m.group(1)
+                logging.debug('Matched ISO %r (priority %d)', fname, priority)
+                if best_version is None or \
+                        best_priority < priority or \
+                        (best_version < version and best_priority == priority):
+                    best_name = fname
+                    best_version = version
+                    best_priority = priority
+
+        return best_name
+
+    def _find_iso_domain(self):
+        """
+        Find path to the ISO domain from available domains mounted on host
+        """
+        if not os.path.isdir(self.VDSM_MOUNTS):
+            logging.error('Cannot find RHV domains')
+            return None
+        for sub in os.walk(self.VDSM_MOUNTS):
+
+            if 'dom_md' in sub[1]:
+                # This looks like a domain so focus on metadata only
+                try:
+                    del sub[1][sub[1].index('master')]
+                except ValueError:
+                    pass
+                try:
+                    del sub[1][sub[1].index('images')]
+                except ValueError:
+                    pass
+                continue
+
+            if 'blockSD' in sub[1]:
+                # Skip block storage domains, we don't support ISOs there
+                del sub[1][sub[1].index('blockSD')]
+
+            if 'metadata' in sub[2] and \
+                    os.path.basename(sub[0]) == 'dom_md' and \
+                    self.is_iso_domain(os.path.join(sub[0], 'metadata')):
+                return os.path.join(
+                    os.path.dirname(sub[0]),
+                    'images',
+                    '11111111-1111-1111-1111-111111111111')
+        return None
+
+    def _is_iso_domain(self, path):
+        """
+        Check if domain is ISO domain. @path is path to domain metadata file
+        """
+        try:
+            logging.debug('is_iso_domain check for %s', path)
+            with open(path, 'r') as f:
+                for line in f:
+                    if line.rstrip() == 'CLASS=Iso':
+                        return True
+        except OSError:
+            logging.exception('Failed to read domain metadata')
+        except IOError:
+            logging.exception('Failed to read domain metadata')
+        return False
 
 
 def error(msg):
@@ -302,58 +451,6 @@ def sdk_connection(data):
             connection.close()
 
 
-def is_iso_domain(path):
-    """
-    Check if domain is ISO domain. @path is path to domain metadata file
-    """
-    try:
-        logging.debug('is_iso_domain check for %s', path)
-        with open(path, 'r') as f:
-            for line in f:
-                if line.rstrip() == 'CLASS=Iso':
-                    return True
-    except OSError:
-        logging.exception('Failed to read domain metadata')
-    except IOError:
-        logging.exception('Failed to read domain metadata')
-    return False
-
-
-def find_iso_domain():
-    """
-    Find path to the ISO domain from available domains mounted on host
-    """
-    if not os.path.isdir(VDSM_MOUNTS):
-        logging.error('Cannot find RHV domains')
-        return None
-    for sub in os.walk(VDSM_MOUNTS):
-
-        if 'dom_md' in sub[1]:
-            # This looks like a domain so focus on metadata only
-            try:
-                del sub[1][sub[1].index('master')]
-            except ValueError:
-                pass
-            try:
-                del sub[1][sub[1].index('images')]
-            except ValueError:
-                pass
-            continue
-
-        if 'blockSD' in sub[1]:
-            # Skip block storage domains, we don't support ISOs there
-            del sub[1][sub[1].index('blockSD')]
-
-        if 'metadata' in sub[2] and \
-                os.path.basename(sub[0]) == 'dom_md' and \
-                is_iso_domain(os.path.join(sub[0], 'metadata')):
-            return os.path.join(
-                os.path.dirname(sub[0]),
-                'images',
-                '11111111-1111-1111-1111-111111111111')
-    return None
-
-
 def write_state(state):
     state_file = state['internal']['state_file']
     state = state.copy()
@@ -524,83 +621,6 @@ def spawn_ssh_agent(data):
     return agent_pid, agent_sock
 
 
-def filter_iso_names(iso_domain, isos):
-    """ @isos is a list of file names or an iterator """
-    # (priority, pattern)
-    patterns = [
-        (7, br'RHV-toolsSetup_([0-9._]+)\.iso'),
-        (6, br'rhv-tools-setup\.iso'),
-        (5, br'RHEV-toolsSetup_([0-9._]+)\.iso'),
-        (4, br'rhev-tools-setup\.iso'),
-        (3, br'oVirt-toolsSetup_([a-z0-9._-]+)\.iso'),
-        (2, br'ovirt-tools-setup\.iso'),
-        (1, br'virtio-win-([0-9.]+).iso'),
-        (0, br'virtio-win\.iso'),
-        ]
-    patterns = [(p[0], re.compile(p[1], re.IGNORECASE))
-                for p in patterns]
-    best_name = None
-    best_version = None
-    best_priority = -1
-
-    for fname in isos:
-        if not os.path.isfile(os.path.join(iso_domain, fname)):
-            continue
-        for priority, pat in patterns:
-            m = pat.match(fname)
-            if not m:
-                continue
-            if len(m.groups()) == 0:
-                version = b''
-            else:
-                version = m.group(1)
-            logging.debug('Matched ISO %r (priority %d)', fname, priority)
-            if best_version is None or \
-                    best_priority < priority or \
-                    (best_version < version and best_priority == priority):
-                best_name = fname
-                best_version = version
-                best_priority = priority
-
-    return best_name
-
-
-def check_install_drivers(data):
-    if 'virtio_win' in data and os.path.isabs(data['virtio_win']):
-        full_path = data['virtio_win']
-    else:
-        iso_domain = find_iso_domain()
-
-        iso_name = data.get('virtio_win')
-        if iso_name is not None:
-            if iso_domain is None:
-                error('ISO domain not found')
-        else:
-            if iso_domain is None:
-                # This is not an error
-                logging.warning('ISO domain not found' +
-                                ' (but install_drivers is true).')
-                data['install_drivers'] = False
-                return
-
-            best_name = filter_iso_names(iso_domain, os.listdir(iso_domain))
-            if best_name is None:
-                # Nothing found, this is not an error
-                logging.warn('Could not find any ISO with drivers' +
-                             ' (but install_drivers is true).')
-                data['install_drivers'] = False
-                return
-            iso_name = best_name
-
-        full_path = os.path.join(iso_domain, iso_name)
-
-    if not os.path.isfile(full_path):
-        error("'virtio_win' must be a path or file name of image in "
-              "ISO domain")
-    data['virtio_win'] = full_path
-    logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
-
-
 def virt_v2v_capabilities():
     try:
         return subprocess.check_output(['virt-v2v', u'--machine-readable']) \
@@ -662,8 +682,9 @@ def check_rhv_guest_tools():
     Make sure there is ISO domain with at least one ISO with windows drivers.
     Preferably RHV Guest Tools ISO.
     """
+    host = VDSMHost()
     data = {'install_drivers': True}
-    check_install_drivers(data)
+    host.check_install_drivers(data)
     return ('virtio_win' in data)
 
 
@@ -728,11 +749,14 @@ def main():
     if direct_backend:
         data['backend'] = 'direct'
 
+    host = VDSMHost()
+
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
     log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
-    v2v_log = os.path.join(VDSM_LOG_DIR, 'v2v-import-%s.log' % log_tag)
-    wrapper_log = os.path.join(VDSM_LOG_DIR,
+    log_dirs = host.getLogs()
+    v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
+    wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
     state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
 
@@ -795,9 +819,12 @@ def main():
                 if k not in data:
                     error('Missing argument: %s' % k)
             if 'rhv_cafile' not in data:
-                logging.info('Path to CA certificate not specified,'
-                             ' trying VDSM default: %s', VDSM_CA)
-                data['rhv_cafile'] = VDSM_CA
+                logging.info('Path to CA certificate not specified')
+                if host.TYPE == host.TYPE_VDSM:
+                    logging.info('... trying VDSM default: %s', host.VDSM_CA)
+                    data['rhv_cafile'] = host.VDSM_CA
+                else:
+                    error('rhv_cafile must be specified')
         elif 'export_domain' in data:
             pass
         else:
@@ -819,7 +846,7 @@ def main():
             # This is for backward compatibility
             data['install_drivers'] = True
         if 'install_drivers' in data:
-            check_install_drivers(data)
+            host.check_install_drivers(data)
         else:
             data['install_drivers'] = False
 

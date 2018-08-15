@@ -138,8 +138,9 @@ with `rhv_url` some other keys need to be also specified.
 
 * `rhv_storage`: name of the target storage domain
 
-* `rhv_cafile`: optional path to the CA certificate. If the key is not
-  specified wrapper looks for the certificate at the default VDSM location.
+* `rhv_cafile`: optional on VDSM host; path to the CA certificate. If the key
+  is not specified wrapper looks for the certificate at the default VDSM
+  location.
 
 * `insecure_connection`: optional, whether to verify peer certificates. For now
   used only when connecting to oVirt/RHV. Default is `false`.
