@@ -2,8 +2,7 @@ lang en_US
 keyboard us
 timezone America/New_York --isUtc
 
-# default credentials are root / 123456
-rootpw $1$079LKObj$MU35vtfsQLMxw1jcaINpu/ --iscrypted
+rootpw --lock
 
 #platform x86, AMD64, or Intel EM64T
 reboot
