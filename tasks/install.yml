@@ -37,6 +37,11 @@
     state: present
     name: virt-v2v
 
+- name: Install oVirt SDK
+  yum:
+    state: present
+    name: python-ovirt-engine-sdk4
+
 - name: Install virt-v2v wrapper
   copy:
     src: "virt-v2v-wrapper.py"
