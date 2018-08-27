@@ -24,7 +24,7 @@
 - name: Ensure nbdkit packages are installed
   yum:
     name: "{{ item }}"
-    state: present
+    state: "{{ v2v_yum_check }}"
   with_items:
     - nbdkit
     - nbdkit-plugin-python2
@@ -34,12 +34,12 @@
 
 - name: Install virt-v2v
   yum:
-    state: present
+    state: "{{ v2v_yum_check }}"
     name: virt-v2v
 
 - name: Install oVirt SDK
   yum:
-    state: present
+    state: "{{ v2v_yum_check }}"
     name: python-ovirt-engine-sdk4
 
 - name: Install virt-v2v wrapper
