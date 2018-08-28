@@ -29,8 +29,29 @@
     - nbdkit
     - nbdkit-plugin-python2
 
+- name: Register nbdkit version
+  yum:
+    list: nbdkit
+  register: pkg_nbdkit
+
+- set_fact:
+    pkg_nbdkit: "{{ pkg_nbdkit.results | selectattr('yumstate', '==', 'installed') | first }}"
+
+- debug: var=pkg_nbdkit
+
 - include_tasks: "vddk-install.yml"
+
+# With nbdkit before 1.2.4 we had to build our own version of VDDK plugin
 - include_tasks: "nbdkit-plugin-vddk-rpm.yml"
+  when:
+    - pkg_nbdkit.epoch == "0"
+    - pkg_nbdkit.version is version_compare('1.2.4', '<')
+
+# With nbdkit 1.2.4 and newer we just make sure the package is installed
+- name: Make sure VDDK plugin is installed
+  yum:
+    state: "{{ v2v_yum_check }}"
+    name: nbdkit-plugin-vddk
 
 - name: Install virt-v2v
   yum:
