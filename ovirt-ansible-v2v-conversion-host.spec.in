@@ -41,6 +41,10 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Wed Aug 29 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.3-1
+- Roles changes:
+  - make nbdkit checking code compatible with current EL
+
 * Wed Aug 29 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.2-1
 - Roles changes:
   - VDDK plugin is not built for new nbdkit
