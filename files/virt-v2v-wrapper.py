@@ -784,20 +784,9 @@ def main():
     # Read and parse input -- hopefully this should be safe to do as root
     data = json.load(sys.stdin)
 
-    # Take the defaults
-    direct_backend = DIRECT_BACKEND
-
-    # NOTE: This is just pre-check, not validation of the input data!
-    if 'export_domain' in data:
-        # Cannot use libvirt backend as root on VDSM host due to permissions
-        direct_backend = True
-
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
     host.set_user(data)
-
-    if direct_backend:
-        data['backend'] = 'direct'
 
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
@@ -829,6 +818,14 @@ def main():
     logging.debug("virt-v2v capabilities: %r" % virt_v2v_caps)
 
     try:
+        # Determine whether direct backend is required
+        direct_backend = DIRECT_BACKEND
+        if 'export_domain' in data:
+            # Cannot use libvirt backend as root on VDSM host due to permissions
+            direct_backend = True
+        if direct_backend:
+            data['backend'] = 'direct'
+
         # Make sure all the needed keys are in data. This is rather poor
         # validation, but...
         if 'vm_name' not in data:
