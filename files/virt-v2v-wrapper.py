@@ -1,5 +1,7 @@
 #!/usr/bin/python2
 #
+# vim: foldmethod=marker foldlevel=99
+#
 # Copyright (c) 2018 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,6 +85,11 @@ class BaseHost(object):
 
     def check_install_drivers(self, data):
         error('cannot check_install_drivers for unknown host type')
+
+############################################################################
+#
+#  RHV {{{
+#
 
 
 class VDSMHost(BaseHost):
@@ -223,6 +230,14 @@ class VDSMHost(BaseHost):
         except IOError:
             logging.exception('Failed to read domain metadata')
         return False
+
+#
+#  }}}
+#
+############################################################################
+#
+#  Routines {{{
+#
 
 
 def error(msg):
@@ -673,9 +688,14 @@ def handle_cleanup(data, state):
                 break
             time.sleep(1)
 
+#
+#  }}}
+#
+############################################################################
+#
+#  Checks {{{
+#
 
-###########
-# Checks
 
 def check_rhv_guest_tools():
     """
@@ -709,7 +729,12 @@ CHECKS = {
     'rhv-version': check_rhv_version,
 }
 
-###########
+#  }}}
+#
+############################################################################
+#
+#  Main {{{
+#
 
 
 def main():
@@ -982,6 +1007,8 @@ def main():
         raise
 
     logging.info('Finished')
+
+# }}}
 
 
 if __name__ == '__main__':
