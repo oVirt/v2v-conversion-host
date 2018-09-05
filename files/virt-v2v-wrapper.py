@@ -80,6 +80,25 @@ class BaseHost(object):
     TYPE_VDSM = 'vdsm'
     TYPE = TYPE_UNKNOWN
 
+    # NOTE: This in reality binds output method (rhv-upload, openstack) to the
+    #       host type (VDSM, EL) we run on. This is not ideal as we should be
+    #       able to use any (or at least some) combinations (e.g. rhv-upload
+    #       from EL system). But nobody asked for this feature yet.
+    def detect(data):
+        if 'export_domain' in data or \
+                'rhv_url' in data:
+            return BaseHost.TYPE_VDSM
+        else:
+            return BaseHost.TYPE_UNKNOWN
+
+    def factory(host_type):
+        if host_type == BaseHost.TYPE_VDSM:
+            return VDSMHost()
+        else:
+            raise ValueError("Cannot build host of type: %r" % host_type)
+
+    # Interface
+
     def getLogs(self):
         return ('/tmp', '/tmp')
 
@@ -702,7 +721,7 @@ def check_rhv_guest_tools():
     Make sure there is ISO domain with at least one ISO with windows drivers.
     Preferably RHV Guest Tools ISO.
     """
-    host = VDSMHost()
+    host = BaseHost.factory(BaseHost.TYPE_VDSM)
     data = {'install_drivers': True}
     host.check_install_drivers(data)
     return ('virtio_win' in data)
@@ -774,7 +793,8 @@ def main():
     if direct_backend:
         data['backend'] = 'direct'
 
-    host = VDSMHost()
+    host_type = BaseHost.detect(data)
+    host = BaseHost.factory(host_type)
 
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
