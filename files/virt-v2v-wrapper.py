@@ -49,7 +49,6 @@ STATE_DIR = '/tmp'
 TIMEOUT = 300
 VDSM_MIN_RHV = '4.2.4'  # This has to match VDSM_MIN_VERSION!
 VDSM_MIN_VERSION = '4.20.31'  # RC4, final
-VDSM_UID = 36
 VIRT_V2V = '/usr/bin/virt-v2v'
 
 # For now there are limited possibilities in how we can select allocation type
@@ -63,8 +62,9 @@ PREALLOCATED_STORAGE_TYPES = (
     sdk.types.StorageType.POSIXFS,
     )
 
+#
 # Tweaks
-VDSM = True
+#
 # We cannot use the libvirt backend in virt-v2v and have to use direct backend
 # for several reasons:
 # - it is necessary on oVirt host when running as root; and we need to run as
@@ -105,6 +105,10 @@ class BaseHost(object):
     def check_install_drivers(self, data):
         error('cannot check_install_drivers for unknown host type')
 
+    def set_user(self, data):
+        """ Possibly switch to different user """
+        pass
+
 ############################################################################
 #
 #  RHV {{{
@@ -128,6 +132,7 @@ class VDSMHost(BaseHost):
     VDSM_LOG_DIR = '/var/log/vdsm/import'
     VDSM_MOUNTS = '/rhev/data-center/mnt'
     VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
+    VDSM_UID = 36
 
     def getLogs(self):
         """ Returns tuple with directory for virt-v2v log and wrapper log """
@@ -169,6 +174,39 @@ class VDSMHost(BaseHost):
                   "ISO domain")
         data['virtio_win'] = full_path
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+    def set_user(self, data):
+        """ Possibly switch to VDSM user """
+
+        if 'export_domain' in data:
+            # Need to be root to mount NFS share
+            return
+
+        uid = os.geteuid()
+        if uid == VDSMHost.VDSM_UID:
+            # logging.debug('Already running as vdsm user')
+            return
+        elif uid == 0:
+            # We need to drop privileges and become vdsm user, but we also need
+            # the proper environment for the user which is tricky to get. The
+            # best thing we can do is spawn another instance. Unfortunately we
+            # have already read the data from stdin. logging.debug('Starting
+            # instance as vdsm user')
+            cmd = '/usr/bin/sudo'
+            args = [cmd, '-u', 'vdsm']
+            args.extend(sys.argv)
+            wrapper = subprocess.Popen(args,
+                                       stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            out, err = wrapper.communicate(json.dumps(data))
+            # logging.debug('vdsm instance finished')
+            sys.stdout.write(out)
+            sys.stderr.write(err)
+            # logging.debug('Terminating root instance')
+            sys.exit(wrapper.returncode)
+        sys.stderr.write('Need to run as vdsm user or root!\n')
+        sys.exit(1)
 
     def _filter_iso_names(self, iso_domain, isos):
         """ @isos is a list of file names or an iterator """
@@ -270,35 +308,6 @@ def error(msg):
     """
     logging.error(msg)
     sys.stderr.write(msg)
-    sys.exit(1)
-
-
-def make_vdsm(data):
-    """Makes sure the process runs as vdsm user"""
-    uid = os.geteuid()
-    if uid == VDSM_UID:
-        # logging.debug('Already running as vdsm user')
-        return
-    elif uid == 0:
-        # We need to drop privileges and become vdsm user, but we also need the
-        # proper environment for the user which is tricky to get. The best
-        # thing we can do is spawn another instance. Unfortunately we have
-        # already read the data from stdin.
-        # logging.debug('Starting instance as vdsm user')
-        cmd = '/usr/bin/sudo'
-        args = [cmd, '-u', 'vdsm']
-        args.extend(sys.argv)
-        wrapper = subprocess.Popen(args,
-                                   stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-        out, err = wrapper.communicate(json.dumps(data))
-        # logging.debug('vdsm instance finished')
-        sys.stdout.write(out)
-        sys.stderr.write(err)
-        # logging.debug('Terminating root instance')
-        sys.exit(wrapper.returncode)
-    sys.stderr.write('Need to run as vdsm user or root!\n')
     sys.exit(1)
 
 
@@ -776,25 +785,19 @@ def main():
     data = json.load(sys.stdin)
 
     # Take the defaults
-    vdsm = VDSM
     direct_backend = DIRECT_BACKEND
 
-    # NOTE: this is just pre-check to find out whether we can run as vdsm user
-    # at all. This is not validation of the input data!
+    # NOTE: This is just pre-check, not validation of the input data!
     if 'export_domain' in data:
-        # Need to be root to mount NFS share
-        vdsm = False
         # Cannot use libvirt backend as root on VDSM host due to permissions
         direct_backend = True
 
-    if vdsm:
-        make_vdsm(data)
+    host_type = BaseHost.detect(data)
+    host = BaseHost.factory(host_type)
+    host.set_user(data)
 
     if direct_backend:
         data['backend'] = 'direct'
-
-    host_type = BaseHost.detect(data)
-    host = BaseHost.factory(host_type)
 
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
