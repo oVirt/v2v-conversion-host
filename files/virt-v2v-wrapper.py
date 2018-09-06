@@ -93,6 +93,10 @@ class BaseHost(object):
     def getLogs(self):
         return ('/tmp', '/tmp')
 
+    def handle_cleanup(self, data, state):
+        """ Handle cleanup after failed conversion """
+        pass
+
     def check_install_drivers(self, data):
         error('cannot check_install_drivers for unknown host type')
 
@@ -140,9 +144,74 @@ class VDSMHost(BaseHost):
     VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
     VDSM_UID = 36
 
+    @contextmanager
+    def sdk_connection(self, data):
+        connection = None
+        url = urlparse(data['rhv_url'])
+        username = url.username if url.username is not None \
+            else 'admin@internal'
+        try:
+            insecure = data['insecure_connection']
+            connection = sdk.Connection(
+                url=str(data['rhv_url']),
+                username=str(username),
+                password=str(data['rhv_password']),
+                ca_file=str(data['rhv_cafile']),
+                log=logging.getLogger(),
+                insecure=insecure,
+            )
+            yield connection
+        finally:
+            if connection is not None:
+                connection.close()
+
     def getLogs(self):
         """ Returns tuple with directory for virt-v2v log and wrapper log """
         return (self.VDSM_LOG_DIR, self.VDSM_LOG_DIR)
+
+    def handle_cleanup(self, data, state):
+        with self.sdk_connection(data) as conn:
+            disks_service = conn.system_service().disks_service()
+            transfers_service = conn.system_service().image_transfers_service()
+            disk_ids = state['internal']['disk_ids'].values()
+            # First stop all active transfers...
+            try:
+                transfers = transfers_service.list()
+                transfers = [t for t in transfers if t.image.id in disk_ids]
+                if len(transfers) == 0:
+                    logging.debug('No active transfers to cancel')
+                for transfer in transfers:
+                    logging.info('Canceling transfer id=%s for disk=%s',
+                                 transfer.id, transfer.image.id)
+                    transfer_service = \
+                        transfers_service.image_transfer_service(
+                            transfer.id)
+                    transfer_service.cancel()
+                    # The incomplete disk will be removed automatically
+                    disk_ids.remove(transfer.image.id)
+            except sdk.Error:
+                logging.exception('Failed to cancel transfers')
+
+            # ... then delete the uploaded disks
+            logging.info('Removing disks: %r', disk_ids)
+            endt = time.time() + TIMEOUT
+            while len(disk_ids) > 0:
+                for disk_id in disk_ids:
+                    try:
+                        disk_service = disks_service.disk_service(disk_id)
+                        disk = disk_service.get()
+                        if disk.status != sdk.types.DiskStatus.OK:
+                            continue
+                        logging.info('Removing disk id=%s', disk_id)
+                        disk_service.remove()
+                        disk_ids.remove(disk_id)
+                    except sdk.Error:
+                        logging.exception('Failed to remove disk id=%s',
+                                          disk_id)
+                if time.time() > endt:
+                    logging.error('Timed out waiting for disks: %r', disk_ids)
+                    break
+                time.sleep(1)
 
     def check_install_drivers(self, data):
         """ Validate and/or find ISO with guest tools and drivers """
@@ -256,7 +325,7 @@ class VDSMHost(BaseHost):
             # Note: This is only temporary. We should get the info from the
             # caller in the future.
             domain_type = None
-            with sdk_connection(data) as c:
+            with self.sdk_connection(data) as c:
                 service = c.system_service().storage_domains_service()
                 domains = service.list(search='name="%s"' %
                                        str(data['rhv_storage']))
@@ -539,27 +608,6 @@ def log_parser(v2v_log):
             parser.close()
 
 
-@contextmanager
-def sdk_connection(data):
-    connection = None
-    url = urlparse(data['rhv_url'])
-    username = url.username if url.username is not None else 'admin@internal'
-    try:
-        insecure = data['insecure_connection']
-        connection = sdk.Connection(
-            url=str(data['rhv_url']),
-            username=str(username),
-            password=str(data['rhv_password']),
-            ca_file=str(data['rhv_cafile']),
-            log=logging.getLogger(),
-            insecure=insecure,
-        )
-        yield connection
-    finally:
-        if connection is not None:
-            connection.close()
-
-
 def write_state(state):
     state_file = state['internal']['state_file']
     state = state.copy()
@@ -737,50 +785,6 @@ def virt_v2v_capabilities():
     except subprocess.CalledProcessError:
         logging.exception('Failed to start virt-v2v')
         return None
-
-
-def handle_cleanup(data, state):
-    with sdk_connection(data) as conn:
-        disks_service = conn.system_service().disks_service()
-        transfers_service = conn.system_service().image_transfers_service()
-        disk_ids = state['internal']['disk_ids'].values()
-        # First stop all active transfers...
-        try:
-            transfers = transfers_service.list()
-            transfers = [t for t in transfers if t.image.id in disk_ids]
-            if len(transfers) == 0:
-                logging.debug('No active transfers to cancel')
-            for transfer in transfers:
-                logging.info('Canceling transfer id=%s for disk=%s',
-                             transfer.id, transfer.image.id)
-                transfer_service = transfers_service.image_transfer_service(
-                    transfer.id)
-                transfer_service.cancel()
-                # The incomplete disk will be removed automatically
-                disk_ids.remove(transfer.image.id)
-        except sdk.Error:
-            logging.exception('Failed to cancel transfers')
-
-        # ... then delete the uploaded disks
-        logging.info('Removing disks: %r', disk_ids)
-        endt = time.time() + TIMEOUT
-        while len(disk_ids) > 0:
-            for disk_id in disk_ids:
-                try:
-                    disk_service = disks_service.disk_service(disk_id)
-                    disk = disk_service.get()
-                    if disk.status != sdk.types.DiskStatus.OK:
-                        continue
-                    logging.info('Removing disk id=%s', disk_id)
-                    disk_service.remove()
-                    disk_ids.remove(disk_id)
-                except sdk.Error:
-                    logging.exception('Failed to remove disk id=%s',
-                                      disk_id)
-            if time.time() > endt:
-                logging.error('Timed out waiting for disks: %r', disk_ids)
-                break
-            time.sleep(1)
 
 #
 #  }}}
@@ -1014,7 +1018,7 @@ def main():
                 # Perform cleanup after failed conversion
                 logging.debug('Cleanup phase')
                 try:
-                    handle_cleanup(data, state)
+                    host.handle_cleanup(data, state)
                 finally:
                     state['finished'] = True
                     write_state(state)
