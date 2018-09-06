@@ -51,17 +51,6 @@ VDSM_MIN_RHV = '4.2.4'  # This has to match VDSM_MIN_VERSION!
 VDSM_MIN_VERSION = '4.20.31'  # RC4, final
 VIRT_V2V = '/usr/bin/virt-v2v'
 
-# For now there are limited possibilities in how we can select allocation type
-# and format. The best thing we can do now is to base the allocation on type of
-# target storage domain.
-PREALLOCATED_STORAGE_TYPES = (
-    sdk.types.StorageType.CINDER,
-    sdk.types.StorageType.FCP,
-    sdk.types.StorageType.GLUSTERFS,
-    sdk.types.StorageType.ISCSI,
-    sdk.types.StorageType.POSIXFS,
-    )
-
 #
 # Tweaks
 #
@@ -84,6 +73,7 @@ class BaseHost(object):
     #       host type (VDSM, EL) we run on. This is not ideal as we should be
     #       able to use any (or at least some) combinations (e.g. rhv-upload
     #       from EL system). But nobody asked for this feature yet.
+    @staticmethod
     def detect(data):
         if 'export_domain' in data or \
                 'rhv_url' in data:
@@ -91,6 +81,7 @@ class BaseHost(object):
         else:
             return BaseHost.TYPE_UNKNOWN
 
+    @staticmethod
     def factory(host_type):
         if host_type == BaseHost.TYPE_VDSM:
             return VDSMHost()
@@ -109,6 +100,10 @@ class BaseHost(object):
         """ Possibly switch to different user """
         pass
 
+    def validate_data(self, data):
+        """ Validate input data, fill in defaults, etc """
+        error("Cannot validate data for uknown host type")
+
 ############################################################################
 #
 #  RHV {{{
@@ -118,6 +113,17 @@ class BaseHost(object):
 class VDSMHost(BaseHost):
     """ Encapsulates data and methods specific to oVirt/RHV environment """
     TYPE = BaseHost.TYPE_VDSM
+
+    # For now there are limited possibilities in how we can select allocation
+    # type and format. The best thing we can do now is to base the allocation
+    # on type of target storage domain.
+    PREALLOCATED_STORAGE_TYPES = (
+        sdk.types.StorageType.CINDER,
+        sdk.types.StorageType.FCP,
+        sdk.types.StorageType.GLUSTERFS,
+        sdk.types.StorageType.ISCSI,
+        sdk.types.StorageType.POSIXFS,
+        )
 
     TOOLS_PATTERNS = [
         (7, br'RHV-toolsSetup_([0-9._]+)\.iso'),
@@ -207,6 +213,66 @@ class VDSMHost(BaseHost):
             sys.exit(wrapper.returncode)
         sys.stderr.write('Need to run as vdsm user or root!\n')
         sys.exit(1)
+
+    def validate_data(self, data):
+        """ Validate input data, fill in defaults, etc """
+        # Determine whether direct backend is required
+        direct_backend = DIRECT_BACKEND
+        if 'export_domain' in data:
+            # Cannot use libvirt backend as root on VDSM host due to
+            # permissions
+            direct_backend = True
+        if direct_backend:
+            data['backend'] = 'direct'
+
+        # Targets (only export domain for now)
+        if 'rhv_url' in data:
+            for k in [
+                    'rhv_cluster',
+                    'rhv_password',
+                    'rhv_storage',
+                    ]:
+                if k not in data:
+                    error('Missing argument: %s' % k)
+            if 'rhv_cafile' not in data:
+                logging.info('Path to CA certificate not specified')
+                data['rhv_cafile'] = VDSMHost.VDSM_CA
+                logging.info('... trying VDSM default: %s',
+                             data['rhv_cafile'])
+        elif 'export_domain' in data:
+            pass
+        else:
+            error('No target specified')
+
+        # Insecure connection
+        if 'insecure_connection' not in data:
+            data['insecure_connection'] = False
+        if data['insecure_connection']:
+            logging.info(
+                'SSL verification is disabled for oVirt SDK connections')
+
+        if 'allocation' not in data:
+            # Check storage domain type and decide on suitable allocation type
+            # Note: This is only temporary. We should get the info from the
+            # caller in the future.
+            domain_type = None
+            with sdk_connection(data) as c:
+                service = c.system_service().storage_domains_service()
+                domains = service.list(search='name="%s"' %
+                                       str(data['rhv_storage']))
+                if len(domains) != 1:
+                    error('Found %d domains matching "%s"!' %
+                          (len(domains), data['rhv_storage']))
+                domain_type = domains[0].storage.type
+            logging.info('Storage domain "%s" is of type %r',
+                         data['rhv_storage'], domain_type)
+            data['allocation'] = 'sparse'
+            if domain_type in VDSMHost.PREALLOCATED_STORAGE_TYPES:
+                data['allocation'] = 'preallocated'
+            logging.info('... selected allocation type is %s',
+                         data['allocation'])
+
+        return data
 
     def _filter_iso_names(self, iso_domain, isos):
         """ @isos is a list of file names or an iterator """
@@ -818,13 +884,6 @@ def main():
     logging.debug("virt-v2v capabilities: %r" % virt_v2v_caps)
 
     try:
-        # Determine whether direct backend is required
-        direct_backend = DIRECT_BACKEND
-        if 'export_domain' in data:
-            # Cannot use libvirt backend as root on VDSM host due to permissions
-            direct_backend = True
-        if direct_backend:
-            data['backend'] = 'direct'
 
         # Make sure all the needed keys are in data. This is rather poor
         # validation, but...
@@ -854,27 +913,6 @@ def main():
                 if k not in data:
                     error('Missing argument: %s' % k)
 
-        # Targets (only export domain for now)
-        if 'rhv_url' in data:
-            for k in [
-                    'rhv_cluster',
-                    'rhv_password',
-                    'rhv_storage',
-                    ]:
-                if k not in data:
-                    error('Missing argument: %s' % k)
-            if 'rhv_cafile' not in data:
-                logging.info('Path to CA certificate not specified')
-                if host.TYPE == host.TYPE_VDSM:
-                    logging.info('... trying VDSM default: %s', host.VDSM_CA)
-                    data['rhv_cafile'] = host.VDSM_CA
-                else:
-                    error('rhv_cafile must be specified')
-        elif 'export_domain' in data:
-            pass
-        else:
-            error('No target specified')
-
         # Network mappings
         if 'network_mappings' in data:
             if isinstance(data['network_mappings'], list):
@@ -895,12 +933,8 @@ def main():
         else:
             data['install_drivers'] = False
 
-        # Insecure connection
-        if 'insecure_connection' not in data:
-            data['insecure_connection'] = False
-        if data['insecure_connection']:
-            logging.info(
-                'SSL verification is disabled for oVirt SDK connections')
+        # Method dependent validation
+        data = host.validate_data(data)
 
         # Allocation type
         if 'allocation' in data:
@@ -908,25 +942,7 @@ def main():
                 error('Invalid value for allocation type: %r' %
                       data['allocation'])
         else:
-            # Check storage domain type and decide on suitable allocation type
-            # Note: This is only temporary. We should get the info from the
-            # caller in the future.
-            domain_type = None
-            with sdk_connection(data) as c:
-                service = c.system_service().storage_domains_service()
-                domains = service.list(search='name="%s"' %
-                                       str(data['rhv_storage']))
-                if len(domains) != 1:
-                    error('Found %d domains matching "%s"!' %
-                          (len(domains), data['rhv_storage']))
-                domain_type = domains[0].storage.type
-            logging.info('Storage domain "%s" is of type %r',
-                         data['rhv_storage'], domain_type)
-            data['allocation'] = 'sparse'
-            if domain_type in PREALLOCATED_STORAGE_TYPES:
-                data['allocation'] = 'preallocated'
-            logging.info('... selected allocation type is %s',
-                         data['allocation'])
+            error('No allocation type specified')
 
         #
         # NOTE: don't use error() beyond this point!
