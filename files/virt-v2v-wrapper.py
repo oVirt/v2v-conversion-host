@@ -28,7 +28,6 @@ import sys
 import tempfile
 import time
 
-import ovirtsdk4 as sdk
 import six
 
 if six.PY2:
@@ -118,17 +117,6 @@ class VDSMHost(BaseHost):
     """ Encapsulates data and methods specific to oVirt/RHV environment """
     TYPE = BaseHost.TYPE_VDSM
 
-    # For now there are limited possibilities in how we can select allocation
-    # type and format. The best thing we can do now is to base the allocation
-    # on type of target storage domain.
-    PREALLOCATED_STORAGE_TYPES = (
-        sdk.types.StorageType.CINDER,
-        sdk.types.StorageType.FCP,
-        sdk.types.StorageType.GLUSTERFS,
-        sdk.types.StorageType.ISCSI,
-        sdk.types.StorageType.POSIXFS,
-        )
-
     TOOLS_PATTERNS = [
         (7, br'RHV-toolsSetup_([0-9._]+)\.iso'),
         (6, br'rhv-tools-setup\.iso'),
@@ -144,6 +132,20 @@ class VDSMHost(BaseHost):
     VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
     VDSM_UID = 36
 
+    def __init__(self):
+        import ovirtsdk4 as sdk
+        self.sdk = sdk
+        # For now there are limited possibilities in how we can select
+        # allocation type and format. The best thing we can do now is to base
+        # the allocation on type of target storage domain.
+        self.PREALLOCATED_STORAGE_TYPES = (
+            self.sdk.types.StorageType.CINDER,
+            self.sdk.types.StorageType.FCP,
+            self.sdk.types.StorageType.GLUSTERFS,
+            self.sdk.types.StorageType.ISCSI,
+            self.sdk.types.StorageType.POSIXFS,
+            )
+
     @contextmanager
     def sdk_connection(self, data):
         connection = None
@@ -152,7 +154,7 @@ class VDSMHost(BaseHost):
             else 'admin@internal'
         try:
             insecure = data['insecure_connection']
-            connection = sdk.Connection(
+            connection = self.sdk.Connection(
                 url=str(data['rhv_url']),
                 username=str(username),
                 password=str(data['rhv_password']),
@@ -189,7 +191,7 @@ class VDSMHost(BaseHost):
                     transfer_service.cancel()
                     # The incomplete disk will be removed automatically
                     disk_ids.remove(transfer.image.id)
-            except sdk.Error:
+            except self.sdk.Error:
                 logging.exception('Failed to cancel transfers')
 
             # ... then delete the uploaded disks
@@ -200,12 +202,12 @@ class VDSMHost(BaseHost):
                     try:
                         disk_service = disks_service.disk_service(disk_id)
                         disk = disk_service.get()
-                        if disk.status != sdk.types.DiskStatus.OK:
+                        if disk.status != self.sdk.types.DiskStatus.OK:
                             continue
                         logging.info('Removing disk id=%s', disk_id)
                         disk_service.remove()
                         disk_ids.remove(disk_id)
-                    except sdk.Error:
+                    except self.sdk.Error:
                         logging.exception('Failed to remove disk id=%s',
                                           disk_id)
                 if time.time() > endt:
@@ -336,7 +338,7 @@ class VDSMHost(BaseHost):
             logging.info('Storage domain "%s" is of type %r',
                          data['rhv_storage'], domain_type)
             data['allocation'] = 'sparse'
-            if domain_type in VDSMHost.PREALLOCATED_STORAGE_TYPES:
+            if domain_type in self.PREALLOCATED_STORAGE_TYPES:
                 data['allocation'] = 'preallocated'
             logging.info('... selected allocation type is %s',
                          data['allocation'])
