@@ -61,15 +61,7 @@ class TestV2vArgs(unittest.TestCase):
             '-io', 'vddk-libdir=/opt/vmware-vix-disklib-distrib',
             '-io', 'vddk-thumbprint=01:23:45:67:89:AB:CD:EA:DB:EE:F0:12:34:56:78:9A:BC:DE:F0:12',  # NOQA E501
             '--password-file', '/vmware/password',
-            '-o', 'rhv-upload',
-            '-oc', 'https://example.my-ovirt.org/ovirt-engine/api',
-            '-os', 'data',
-            '-op', '/rhv/password',
-            '-oo', 'rhv-cafile=/rhv/ca.pem',
-            '-oo', 'rhv-cluster=Default',
-            '-oo', 'rhv-direct',
         ]
-
         v2v_args, v2v_env = wrapper.prepare_command(data, [])
         self.assertEqual(v2v_args, expected)
 

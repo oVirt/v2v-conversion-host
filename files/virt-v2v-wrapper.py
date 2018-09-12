@@ -99,6 +99,10 @@ class BaseHost(object):
     def check_install_drivers(self, data):
         error('cannot check_install_drivers for unknown host type')
 
+    def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        """ Prepare virt-v2v command parts that are method dependent """
+        return v2v_args, v2v_env
+
     def set_user(self, data):
         """ Possibly switch to different user """
         pass
@@ -251,6 +255,30 @@ class VDSMHost(BaseHost):
                   "ISO domain")
         data['virtio_win'] = full_path
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
+
+    def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        if 'rhv_url' in data:
+            v2v_args.extend([
+                '-o', 'rhv-upload',
+                '-oc', data['rhv_url'],
+                '-os', data['rhv_storage'],
+                '-op', data['rhv_password_file'],
+                '-oo', 'rhv-cafile=%s' % data['rhv_cafile'],
+                '-oo', 'rhv-cluster=%s' % data['rhv_cluster'],
+                '-oo', 'rhv-direct',
+                ])
+            if data['insecure_connection']:
+                v2v_args.extend(['-oo', 'rhv-verifypeer=%s' %
+                                ('false' if data['insecure_connection'] else
+                                 'true')])
+
+        elif 'export_domain' in data:
+            v2v_args.extend([
+                '-o', 'rhv',
+                '-os', data['export_domain'],
+                ])
+
+        return v2v_args, v2v_env
 
     def set_user(self, data):
         """ Possibly switch to VDSM user """
@@ -642,27 +670,6 @@ def prepare_command(data, v2v_caps, agent_sock=None):
             '-it', 'ssh',
             ])
 
-    if 'rhv_url' in data:
-        v2v_args.extend([
-            '-o', 'rhv-upload',
-            '-oc', data['rhv_url'],
-            '-os', data['rhv_storage'],
-            '-op', data['rhv_password_file'],
-            '-oo', 'rhv-cafile=%s' % data['rhv_cafile'],
-            '-oo', 'rhv-cluster=%s' % data['rhv_cluster'],
-            '-oo', 'rhv-direct',
-            ])
-        if data['insecure_connection']:
-            v2v_args.extend(['-oo', 'rhv-verifypeer=%s' %
-                            ('false' if data['insecure_connection'] else
-                             'true')])
-
-    elif 'export_domain' in data:
-        v2v_args.extend([
-            '-o', 'rhv',
-            '-os', data['export_domain'],
-            ])
-
     if 'allocation' in data:
         v2v_args.extend([
             '-oa', data['allocation']
@@ -693,9 +700,11 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     return (v2v_args, v2v_env)
 
 
-def wrapper(data, state, v2v_log, v2v_caps, agent_sock=None):
+def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
+    v2v_args, v2v_env = host.prepare_command(
+        data, v2v_args, v2v_env, v2v_caps)
 
     proc = None
     with open(v2v_log, 'w') as log:
@@ -1005,7 +1014,7 @@ def main():
                 agent_pid, agent_sock = spawn_ssh_agent(data)
                 if agent_pid is None:
                     raise RuntimeError('Failed to start ssh-agent')
-            wrapper(data, state, v2v_log, virt_v2v_caps, agent_sock)
+            wrapper(host, data, state, v2v_log, virt_v2v_caps, agent_sock)
             if agent_pid is not None:
                 os.kill(agent_pid, signal.SIGTERM)
 
