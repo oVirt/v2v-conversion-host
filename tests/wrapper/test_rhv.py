@@ -117,7 +117,7 @@ class TestRHV(unittest.TestCase):
         ]
         host = wrapper.BaseHost.factory(wrapper.BaseHost.TYPE_VDSM)
         v2v_args, v2v_env = host.prepare_command(
-                data, [], [], [])
+                data, [], {}, [])
         self.assertEqual(v2v_args, expected)
 
     def test_vddk_rhv_insecure(self):
@@ -135,7 +135,7 @@ class TestRHV(unittest.TestCase):
         ]
         host = wrapper.BaseHost.factory(wrapper.BaseHost.TYPE_VDSM)
         v2v_args, v2v_env = host.prepare_command(
-                data, [], [], [])
+                data, [], {}, [])
         self.assertEqual(v2v_args, expected)
 
     def test_vddk_export(self):
@@ -146,5 +146,5 @@ class TestRHV(unittest.TestCase):
         ]
         host = wrapper.BaseHost.factory(wrapper.BaseHost.TYPE_VDSM)
         v2v_args, v2v_env = host.prepare_command(
-                data, [], [], [])
+                data, [], {}, [])
         self.assertEqual(v2v_args, expected)
