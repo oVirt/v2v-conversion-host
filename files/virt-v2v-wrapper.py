@@ -28,6 +28,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 
 import six
 
@@ -40,7 +41,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "8.1"
+VERSION = "8.2"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -59,11 +60,13 @@ VIRT_V2V = '/usr/bin/virt-v2v'
 #   targets)
 # - SSH transport method cannot be used with libvirt because it does not pass
 #   SSH_AUTH_SOCK env. variable to the QEMU process
+# - OpenStack mode has to run as root so we need direct backend there too
 DIRECT_BACKEND = True
 
 
 class BaseHost(object):
     TYPE_UNKNOWN = 'unknown'
+    TYPE_OSP = 'osp'
     TYPE_VDSM = 'vdsm'
     TYPE = TYPE_UNKNOWN
 
@@ -76,11 +79,15 @@ class BaseHost(object):
         if 'export_domain' in data or \
                 'rhv_url' in data:
             return BaseHost.TYPE_VDSM
+        elif 'osp_environment' in data:
+            return BaseHost.TYPE_OSP
         else:
             return BaseHost.TYPE_UNKNOWN
 
     @staticmethod
     def factory(host_type):
+        if host_type == BaseHost.TYPE_OSP:
+            return OSPHost()
         if host_type == BaseHost.TYPE_VDSM:
             return VDSMHost()
         else:
@@ -110,6 +117,72 @@ class BaseHost(object):
         """ Validate input data, fill in defaults, etc """
         error("Cannot validate data for uknown host type")
 
+############################################################################
+#
+#  Openstack {{{
+#
+
+
+class OSPHost(BaseHost):
+    TYPE = BaseHost.TYPE_VDSM
+
+    def getLogs(self):
+        log_dir = '/var/log/virt-v2v'
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+        return (log_dir, log_dir)
+
+    def handle_cleanup(self, data, state):
+        """ Handle cleanup after failed conversion """
+        # Nothing to do for OSP
+        pass
+
+    def check_install_drivers(self, data):
+        # Nothing to do for OSP
+        pass
+
+    def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        """ Prepare virt-v2v command parts that are method dependent """
+        v2v_args.extend([
+            '-o', 'openstack',
+            '-oo', 'server-id=%s' % data['osp_server_id'],
+            '-oo', 'guest-id=%s' % data['osp_guest_id'],
+            ])
+        if 'osp_volume_type_id' in data:
+            v2v_args.extend([
+                '-os', data['osp_volume_type_id'],
+                ])
+        v2v_env.update(data['osp_environment'])
+        return v2v_args, v2v_env
+
+    def set_user(self, data):
+        """ Possibly switch to different user """
+        # Check we are running as root
+        uid = os.geteuid()
+        if uid != 0:
+            sys.stderr.write('Need to run as root!\n')
+            sys.exit(1)
+
+    def validate_data(self, data):
+        """ Validate input data, fill in defaults, etc """
+        # Enforce direct backend
+        data['backend'] = 'direct'
+        # Check necessary keys
+        for k in [
+                'osp_environment',
+                'osp_server_id',
+                ]:
+            if k not in data:
+                error('Missing argument: %s' % k)
+        for k in data['osp_environment'].keys():
+            if k[:3] != 'OS_':
+                error('found invalid key in OSP environment: %s' % k)
+        if 'osp_guest_id' not in data:
+            data['osp_guest_id'] = uuid.uuid4()
+        return data
+#
+#  }}}
+#
 ############################################################################
 #
 #  RHV {{{
@@ -534,6 +607,9 @@ class OutputParser(object):
         br'nbdkit: debug: Opening file (.*) \(.*\)')
     OVERLAY_SOURCE_RE = re.compile(
         br' *overlay source qemu URI: json:.*"file\.path": ?"([^"]+)"')
+    OVERLAY_SOURCE2_RE = re.compile(
+        br'libguestfs: parse_json: qemu-img info JSON output:.*'
+        br'"backing-filename".*\\"file\.path\\": ?\\"([^"]+)\\"')
     VMDK_PATH_RE = re.compile(
         br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
@@ -577,8 +653,19 @@ class OutputParser(object):
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
 
-        # SSH
+        # SSH + RHV
         m = self.OVERLAY_SOURCE_RE.match(line)
+        if m is not None:
+            path = m.group(1)
+            # Transform path to be raltive to storage
+            self._current_path = self.VMDK_PATH_RE.sub(
+                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path)
+            if self._current_disk is not None:
+                logging.info('Copying path: %s', self._current_path)
+                self._locate_disk(state)
+
+        # SSH + OpenStack
+        m = self.OVERLAY_SOURCE2_RE.match(line)
         if m is not None:
             path = m.group(1)
             # Transform path to be raltive to storage

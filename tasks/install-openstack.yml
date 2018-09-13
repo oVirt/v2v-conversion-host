@@ -1,1 +1,8 @@
 ---
+- name: Install packages for OpenStack appliance
+  yum:
+    name: "{{ item }}"
+    state: "{{ v2v_yum_check }}"
+  with_items:
+    - python2-openstackclient
+    - virtio-win
