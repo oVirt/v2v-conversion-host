@@ -24,6 +24,7 @@ import os
 import pycurl
 import re
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -31,11 +32,9 @@ import time
 import six
 
 if six.PY2:
-    import subprocess32 as subprocess
     from urlparse import urlparse
     DEVNULL = open(os.devnull, 'r+')
 else:
-    import subprocess
     from urllib.parse import urlparse
     xrange = range
     DEVNULL = subprocess.DEVNULL
