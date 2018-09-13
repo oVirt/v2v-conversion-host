@@ -779,10 +779,12 @@ def spawn_ssh_agent(data):
         cmd.append(data['ssh_key_file'])
     else:
         logging.info('Using SSH key(s) from ~/.ssh')
-    ret_code = subprocess.call(cmd, env=env)
-    if ret_code != 0:
-        logging.error('Failed to add SSH keys to the agent! ssh-add'
-                      ' terminated with return code %d', ret_code)
+    try:
+        out = subprocess.check_output(cmd, env=env,
+            stderr=subprocess.STDOUT, stdin=DEVNULL)
+    except subprocess.CalledProcessError as e:
+        logging.exception('Failed to add SSH keys to the agent!')
+        logging.error("ssh-add output: %s", e.output)
         os.kill(agent_pid, signal.SIGTERM)
         return None, None
     return agent_pid, agent_sock
