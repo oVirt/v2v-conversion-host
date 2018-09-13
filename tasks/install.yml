@@ -57,5 +57,5 @@
     dest: "/usr/bin/"
     mode: 0755
 
-- include_task: "validate-{{v2v_host_type}}.yml"
-- include_task: "install-{{v2v_host_type}}.yml"
+- include_tasks: "validate-{{v2v_host_type}}.yml"
+- include_tasks: "install-{{v2v_host_type}}.yml"
