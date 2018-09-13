@@ -256,6 +256,9 @@ class VDSMHost(BaseHost):
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
 
     def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        v2v_args.extend([
+            '-of', data['output_format'],
+            ])
         if 'allocation' in data:
             v2v_args.extend([
                 '-oa', data['allocation']
@@ -327,6 +330,14 @@ class VDSMHost(BaseHost):
             direct_backend = True
         if direct_backend:
             data['backend'] = 'direct'
+
+        # Output file format (raw or qcow2)
+        if 'output_format' in data:
+            if data['output_format'] not in ('raw', 'qcow2'):
+                error('Invalid output format %r, expected raw or qcow2' %
+                      data['output_format'])
+        else:
+            data['output_format'] = 'raw'
 
         # Targets (only export domain for now)
         if 'rhv_url' in data:
@@ -654,7 +665,6 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     v2v_args = [
         VIRT_V2V, '-v', '-x',
         data['vm_name'],
-        '-of', data['output_format'],
         '--bridge', 'ovirtmgmt',
         '--root', 'first'
     ]
@@ -905,14 +915,6 @@ def main():
         # validation, but...
         if 'vm_name' not in data:
                 error('Missing vm_name')
-
-        # Output file format (raw or qcow2)
-        if 'output_format' in data:
-            if data['output_format'] not in ('raw', 'qcow2'):
-                error('Invalid output format %r, expected raw or qcow2' %
-                      data['output_format'])
-        else:
-            data['output_format'] = 'raw'
 
         # Transports (only VDDK for now)
         if 'transport_method' not in data:
