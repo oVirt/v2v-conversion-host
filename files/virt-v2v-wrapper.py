@@ -256,6 +256,11 @@ class VDSMHost(BaseHost):
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
 
     def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        if 'allocation' in data:
+            v2v_args.extend([
+                '-oa', data['allocation']
+                ])
+
         if 'rhv_url' in data:
             v2v_args.extend([
                 '-o', 'rhv-upload',
@@ -669,11 +674,6 @@ def prepare_command(data, v2v_caps, agent_sock=None):
             '-it', 'ssh',
             ])
 
-    if 'allocation' in data:
-        v2v_args.extend([
-            '-oa', data['allocation']
-            ])
-
     if 'network_mappings' in data:
         for mapping in data['network_mappings']:
             if 'mac_address' in mapping and 'mac-option' in v2v_caps:
@@ -951,14 +951,6 @@ def main():
 
         # Method dependent validation
         data = host.validate_data(data)
-
-        # Allocation type
-        if 'allocation' in data:
-            if data['allocation'] not in ('preallocated', 'sparse'):
-                error('Invalid value for allocation type: %r' %
-                      data['allocation'])
-        else:
-            error('No allocation type specified')
 
         #
         # NOTE: don't use error() beyond this point!
