@@ -107,6 +107,7 @@ class TestRHV(unittest.TestCase):
     def test_vddk_rhv_basic(self):
         data = self.VDDK_RHV.copy()
         expected = [
+            '-of', 'raw',
             '-o', 'rhv-upload',
             '-oc', 'https://example.my-ovirt.org/ovirt-engine/api',
             '-os', 'data',
@@ -124,6 +125,7 @@ class TestRHV(unittest.TestCase):
         data = self.VDDK_RHV.copy()
         data['insecure_connection'] = True
         expected = [
+            '-of', 'raw',
             '-o', 'rhv-upload',
             '-oc', 'https://example.my-ovirt.org/ovirt-engine/api',
             '-os', 'data',
@@ -141,6 +143,7 @@ class TestRHV(unittest.TestCase):
     def test_vddk_export(self):
         data = self.VDDK_EXPORT.copy()
         expected = [
+            '-of', 'raw',
             '-o', 'rhv',
             '-os', '1.2.3.4:/export/domain',
         ]
