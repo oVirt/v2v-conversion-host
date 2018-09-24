@@ -30,12 +30,4 @@ ovirt-ansible-v2v-conversion-host
 nbdkit  # nbdkit source requires RHEL 7.6 or RHV channel
 nbdkit-plugin-python2
 virt-v2v
-
-# tasks/nbdkit-plugin-vddk-rpm.yml
-# missing build-utils RPM and @Development Tools is too heavy
-gcc
-make
-rpm-build
-nbdkit-devel
-gnutls-devel
 %end

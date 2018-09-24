@@ -25,14 +25,6 @@ repo --name=epel --baseurl=http://dl.fedoraproject.org/pub/epel/7/x86_64/
 nbdkit
 nbdkit-plugin-python2
 virt-v2v
-
-# tasks/nbdkit-plugin-vddk-rpm.yml
-# missing build-utils RPM and @Development Tools is too heavy
-gcc
-make
-rpm-build
-nbdkit-devel
-gnutls-devel
 %end
 
 %post --log=/root/ks-post-v2v.log --erroronfail
