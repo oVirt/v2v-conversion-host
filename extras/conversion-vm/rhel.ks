@@ -24,10 +24,15 @@ firstboot --disable
 
 
 %packages
+ansible
 ovirt-ansible-v2v-conversion-host
 
 # tasks/install.yml
 nbdkit  # nbdkit source requires RHEL 7.6 or RHV channel
 nbdkit-plugin-python2
 virt-v2v
+
+# tasks/install-openstack.yml
+python2-openstackclient
+virtio-win
 %end
