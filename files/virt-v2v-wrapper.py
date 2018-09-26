@@ -148,11 +148,15 @@ class OSPHost(BaseHost):
             '-oo', 'server-id=%s' % data['osp_server_id'],
             '-oo', 'guest-id=%s' % data['osp_guest_id'],
             ])
+        # Convert to arguments of the form os-something
+        for k, v in six.iteritems(data['osp_environment']):
+            v2v_args.extend([
+                '-oo',
+                '%s=%s' % (k.lower().replace('_', '-'), v)])
         if 'osp_volume_type_id' in data:
             v2v_args.extend([
                 '-os', data['osp_volume_type_id'],
                 ])
-        v2v_env.update(data['osp_environment'])
         return v2v_args, v2v_env
 
     def set_user(self, data):
@@ -174,8 +178,9 @@ class OSPHost(BaseHost):
                 ]:
             if k not in data:
                 error('Missing argument: %s' % k)
+        osp_arg_re = re.compile('os[-_]', re.IGNORECASE)
         for k in data['osp_environment'].keys():
-            if k[:3] != 'OS_':
+            if not osp_arg_re.match(k[:3]):
                 error('found invalid key in OSP environment: %s' % k)
         if 'osp_guest_id' not in data:
             data['osp_guest_id'] = uuid.uuid4()
