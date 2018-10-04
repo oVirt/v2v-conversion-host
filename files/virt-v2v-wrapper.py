@@ -65,6 +65,11 @@ VIRT_V2V = '/usr/bin/virt-v2v'
 DIRECT_BACKEND = True
 
 
+############################################################################
+#
+#  Host base interface {{{
+#
+
 class BaseHost(object):
     TYPE_UNKNOWN = 'unknown'
     TYPE_OSP = 'osp'
@@ -103,6 +108,10 @@ class BaseHost(object):
         """ Handle cleanup after failed conversion """
         pass
 
+    def handle_finish(self, data, state):
+        """ Handle finish after successfull conversion """
+        return True
+
     def check_install_drivers(self, data):
         error('cannot check_install_drivers for unknown host type')
 
@@ -117,7 +126,9 @@ class BaseHost(object):
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
         error("Cannot validate data for uknown host type")
-
+#
+#  }}}
+#
 ############################################################################
 #
 #  Openstack {{{
@@ -135,8 +146,109 @@ class OSPHost(BaseHost):
 
     def handle_cleanup(self, data, state):
         """ Handle cleanup after failed conversion """
-        # Nothing to do for OSP
-        pass
+        # Remove created ports
+        ports = state['internal']['ports']
+        if len(ports) > 0:
+            logging.info('Removing ports: %r', ports)
+            port_cmd = ['port', 'delete']
+            port_cmd.extend(ports)
+            try:
+                self._run_openstack(port_cmd, data)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Failed to remove port(s)')
+                logging.error('Command output:\n%s', e.output)
+        # Remove volumes
+        volumes = state['internal']['disk_ids'].values()
+        if len(volumes) > 0:
+            logging.info('Removing volumes: %r', volumes)
+            vol_cmd = ['volume', 'delete']
+            vol_cmd.extend(volumes)
+            try:
+                self._run_openstack(vol_cmd, data)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Failed to remove volumes(s)')
+                logging.error('Command output:\n%s', e.output)
+
+    def handle_finish(self, data, state):
+        """
+        Handle finish after successfull conversion
+
+        For OpenStack this entails creating a VM instance.
+        """
+        # Init keystone
+        try:
+            self._run_openstack(['token', 'issue'], data)
+        except subprocess.CalledProcessError as e:
+            logging.exception('Create VM failed')
+            logging.error('Command output:\n%s', e.output)
+            return False
+        volumes = []
+        # Build volume list
+        for k in sorted(state['internal']['disk_ids'].keys()):
+            volumes.append(state['internal']['disk_ids'][k])
+        if len(volumes) == 0:
+            logging.error('No volumes found!')
+            return False
+        if len(volumes) != len(state['internal']['disk_ids']):
+            logging.error('Detected duplicate indices of Cinder volumes')
+            logging.debug('Source volume map: %r',
+                          state['internal']['disk_ids'])
+            logging.debug('Assumed volume list: %r', volumes)
+            return False
+        # TODO: check disk existence
+        # We probably should check that the index in properties matches. But
+        # since we extract it from the command that sets the properties we can
+        # skip this step.
+        #
+        # Create ports
+        ports = []
+        for nic in data['network_mappings']:
+            port_cmd = [
+                'port', 'create',
+                '--format', 'json',
+                '--network', nic['destination'],
+                '--mac-address', nic['mac_address'],
+                '--enable',
+                '%s_port_%s' % (data['vm_name'], len(ports)),
+                ]
+            if 'ip_address' in nic:
+                port_cmd.extend([
+                    '--fixed-ip', 'ip-address=%s' % nic['ip_address'],
+                    ])
+            try:
+                port = self._run_openstack(port_cmd, data)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Failed to create port')
+                logging.error('Command output:\n%s', e.output)
+                return False
+            port = json.loads(port)
+            logging.info('Created port id=%s', port['id'])
+            ports.append(port['id'])
+        state['internal']['ports'] = ports
+        # Create instance
+        os_command = [
+            'server', 'create',
+            '--flavor', data['osp_flavor_id'],
+            ]
+        for grp in data['osp_security_groups_ids']:
+            os_command.extend(['--security-group', grp])
+        os_command.extend(['--volume', volumes[0]])
+        for i in xrange(1, len(volumes)):
+            os_command.extend([
+                '--block-device-mapping',
+                '%s=%s' % (self._get_disk_name(i+1), volumes[i]),
+                ])
+        for port in ports:
+            os_command.extend(['--nic', 'port-id=%s' % port])
+        os_command.append(data['vm_name'])
+        # Let's get rolling...
+        try:
+            self._run_openstack(os_command, data)
+            return True
+        except subprocess.CalledProcessError as e:
+            logging.exception('Create VM failed')
+            logging.error('Command output:\n%s', e.output)
+            return False
 
     def check_install_drivers(self, data):
         # Nothing to do for OSP
@@ -174,7 +286,10 @@ class OSPHost(BaseHost):
         data['backend'] = 'direct'
         # Check necessary keys
         for k in [
+                'osp_destination_project_id',
                 'osp_environment',
+                'osp_flavor_id',
+                'osp_security_groups_ids',
                 'osp_server_id',
                 ]:
             if k not in data:
@@ -185,7 +300,34 @@ class OSPHost(BaseHost):
                 error('found invalid key in OSP environment: %s' % k)
         if 'osp_guest_id' not in data:
             data['osp_guest_id'] = uuid.uuid4()
+        if not isinstance(data['osp_security_groups_ids'], list):
+            error('osp_security_groups_ids must be a list')
+        for mapping in data['network_mappings']:
+            if 'mac_address' not in mapping:
+                error('Missing mac address in one of network mappings')
         return data
+
+    def _get_disk_name(self, index):
+        if index < 1:
+            raise ValueError('Index less then 1', index)
+        if index > 702:
+            raise ValueError('Index too large', index)
+        index = index - 1
+        one = index // 26
+        two = index % 26
+        enumid = (lambda i: chr(ord('a') + i))
+        return 'vd%s%s' % ('' if one == 0 else enumid(one-1), enumid(two))
+
+    def _run_openstack(self, cmd, data):
+        command = ['openstack']
+        # Convert to arguments of the form os-something
+        for k, v in six.iteritems(data['osp_environment']):
+            command.append('--%s=%s' % (k.lower().replace('_', '-'), v))
+        command.extend(cmd)
+        log_command_safe(command, {})
+        return subprocess.check_output(command, stderr=subprocess.STDOUT)
+
+
 #
 #  }}}
 #
@@ -620,6 +762,11 @@ class OutputParser(object):
         br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
+    OSP_VOLUME_PROPS = re.compile(
+        br'openstack .*\'volume\' \'set\'.*'
+        br'\'--property\''
+        br' \'virt_v2v_disk_index=(?P<volume>[0-9]+)/[0-9]+\'.*'
+        br'\'(?P<uuid>[a-fA-F0-9-]*)\'')
 
     def __init__(self, v2v_log):
         self._log = open(v2v_log, 'rbU')
@@ -700,6 +847,17 @@ class OutputParser(object):
             disk_id = m.group('uuid')
             state['internal']['disk_ids'][path] = disk_id
             logging.debug('Path \'%s\' has disk id=\'%s\'', path, disk_id)
+
+        # OpenStack volume index and UUID
+        m = self.OSP_VOLUME_PROPS.match(line)
+        if m is not None:
+            volume_id = m.group('uuid').decode('utf-8')
+            index = int(m.group('volume'))
+            state['internal']['disk_ids'][index] = volume_id
+            logging.debug(
+                'Volume at index %d has id=\'%s\'',
+                index, volume_id)
+
         return state
 
     def close(self):
@@ -1091,8 +1249,10 @@ def main():
                 'disks': [],
                 'internal': {
                     'disk_ids': {},
+                    'ports': [],
                     'state_file': state_file,
                     },
+                'failed': False,
                 }
         try:
             if 'source_disks' in data:
@@ -1128,7 +1288,8 @@ def main():
             wrapper(host, data, state, v2v_log, virt_v2v_caps, agent_sock)
             if agent_pid is not None:
                 os.kill(agent_pid, signal.SIGTERM)
-
+            if not state.get('failed', False):
+                state['failed'] = not host.handle_finish(data, state)
         except Exception:
             # No need to log the exception, it will get logged below
             logging.error('An error occured, finishing state file...')
@@ -1136,7 +1297,7 @@ def main():
             write_state(state)
             raise
         finally:
-            if 'failed' in state:
+            if state.get('failed', False):
                 # Perform cleanup after failed conversion
                 logging.debug('Cleanup phase')
                 try:

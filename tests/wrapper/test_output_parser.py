@@ -90,3 +90,26 @@ class TestOutputParser(unittest.TestCase):
             self.assertEqual(
                 state['internal']['disk_ids'][path],
                 b'11111111-1111-1111-1111-111111111111')
+
+    def test_osp_volume_uuid(self):
+        with wrapper.log_parser('/dev/null') as parser:
+            state = {
+                'internal': {
+                    'disk_ids': {
+                        }
+                    }
+                }
+            lines = [
+                    br"openstack '--os-username=admin' '--os-identity-api-version=3' '--os-user-domain-name=Default' '--os-auth-url=http://10.19.2.25:5000//v3' '--os-volume-api-version=3' '--os-project-domain-name=Default' '--os-project-name=admin' '--os-password=100Root-' 'volume' 'set' '--description' 'tg-mini2 disk 1/2 converted by virt-v2v' '--property' 'virt_v2v_version=1.38.2rhel=7,release=12.23.lp.el7,libvirt' '--property' 'virt_v2v_conversion_date=2018/10/15 14:43:11' '--property' 'virt_v2v_guest_name=tg-mini2' '--property' 'virt_v2v_disk_index=1/2' '--property' 'virt_v2v_guest_id=deadbeef-0000-0000-0000-000000000000' '77c51545-f2a4-4bbf-8f04-169a15c23354'",  # NOQA
+                    br"openstack '--os-username=admin' '--os-identity-api-version=3' '--os-user-domain-name=Default' '--os-auth-url=http://10.19.2.25:5000//v3' '--os-volume-api-version=3' '--os-project-domain-name=Default' '--os-project-name=admin' '--os-password=100Root-' 'volume' 'set' '--description' 'tg-mini2 disk 2/2 converted by virt-v2v' '--property' 'virt_v2v_version=1.38.2rhel=7,release=12.23.lp.el7,libvirt' '--property' 'virt_v2v_conversion_date=2018/10/15 14:43:11' '--property' 'virt_v2v_guest_name=tg-mini2' '--property' 'virt_v2v_disk_index=2/2' '--property' 'virt_v2v_guest_id=deadbeef-0000-0000-0000-000000000000' 'd85b7a6f-bffa-4b77-93df-912afd6e7014'",  # NOQA
+                    ]
+            for l in lines:
+                state = parser.parse_line(state, l)
+            self.assertIn(1, state['internal']['disk_ids'])
+            self.assertIn(2, state['internal']['disk_ids'])
+            self.assertEqual(
+                state['internal']['disk_ids'][1],
+                '77c51545-f2a4-4bbf-8f04-169a15c23354')
+            self.assertEqual(
+                state['internal']['disk_ids'][2],
+                'd85b7a6f-bffa-4b77-93df-912afd6e7014')
