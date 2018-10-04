@@ -6,6 +6,7 @@
   with_items:
     - python2-openstackclient
     - virtio-win
+    - python-six
 
 - name: Look for SSH key
   stat:

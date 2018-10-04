@@ -33,6 +33,7 @@ nbdkit-plugin-python2
 virt-v2v
 
 # tasks/install-openstack.yml
+python-six
 python2-openstackclient
 virtio-win
 %end

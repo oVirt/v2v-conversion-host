@@ -30,6 +30,7 @@ virt-v2v
 
 # tasks/install-openstack.yml
 python-openstackclient
+python-six
 %end
 
 %post --log=/root/ks-post-v2v.log --erroronfail
