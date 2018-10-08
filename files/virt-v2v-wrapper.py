@@ -18,6 +18,7 @@
 #
 
 from contextlib import contextmanager
+import copy
 import json
 import logging
 import os
@@ -809,8 +810,8 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     proc = None
     with open(v2v_log, 'w') as log:
-        logging.info('Starting virt-v2v as: %r, environment: %r',
-                     v2v_args, v2v_env)
+        logging.info('Starting virt-v2v:')
+        log_command_safe(v2v_args, v2v_env)
         proc = subprocess.Popen(
                 v2v_args,
                 stdin=DEVNULL,
@@ -902,6 +903,26 @@ def virt_v2v_capabilities():
     except subprocess.CalledProcessError:
         logging.exception('Failed to start virt-v2v')
         return None
+
+
+def log_command_safe(args, env, log=None):
+    args = copy.deepcopy(args)
+    env = copy.deepcopy(env)
+    # Filter command
+    arg_re = re.compile('([^=]*password[^=]*)=(.*)', re.IGNORECASE)
+    for i in xrange(1, len(args)):
+        m = arg_re.match(args[i])
+        if m:
+            args[i] = '%s=*****' % m.group(1)
+    # Filter environment
+    env_re = re.compile('password', re.IGNORECASE)
+    for k in env.keys():
+        if env_re.search(k):
+            env[k] = '*****'
+    # Log the result
+    if log is None:
+        log = logging
+    log.info('Executing command: %r, environment: %r', args, env)
 
 #
 #  }}}
