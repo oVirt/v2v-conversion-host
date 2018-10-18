@@ -41,6 +41,14 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Thu Oct 18 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.7.0-1
+- Wrapper changes
+  - general refactoring to support different conversion targets
+  - drop dependency on subprocess32
+  - add support for OpenStack
+- Roles changes
+  - add support for OpenStack
+
 * Wed Aug 29 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.6.3-1
 - Roles changes:
   - make nbdkit checking code compatible with current EL
