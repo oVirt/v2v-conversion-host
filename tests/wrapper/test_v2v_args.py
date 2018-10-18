@@ -51,7 +51,7 @@ class TestV2vArgs(unittest.TestCase):
     def test_vddk_rhv_basic(self):
         data = self.VDDK_RHV.copy()
         expected = [
-            '/usr/bin/virt-v2v', '-v', '-x', 'My Virtual',
+            '-v', '-x', 'My Virtual',
             '--bridge', 'ovirtmgmt',
             '--root', 'first',
             '-i', 'libvirt',

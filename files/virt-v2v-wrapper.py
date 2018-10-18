@@ -42,7 +42,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "12"
+VERSION = "13"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -119,9 +119,13 @@ class BaseHost(object):
         """ Prepare virt-v2v command parts that are method dependent """
         return v2v_args, v2v_env
 
-    def set_user(self, data):
-        """ Possibly switch to different user """
-        pass
+    def get_uid(self, data):
+        """ Tell under which user to run virt-v2v """
+        return os.geteuid()
+
+    def get_gid(self, data):
+        """ Tell under which group to run virt-v2v """
+        return os.getegid()
 
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
@@ -411,7 +415,8 @@ class VDSMHost(BaseHost):
     VDSM_LOG_DIR = '/var/log/vdsm/import'
     VDSM_MOUNTS = '/rhev/data-center/mnt'
     VDSM_CA = '/etc/pki/vdsm/certs/cacert.pem'
-    VDSM_UID = 36
+    VDSM_UID = 36  # vdsm
+    VDSM_GID = 36  # kvm
 
     def __init__(self):
         import ovirtsdk4 as sdk
@@ -565,38 +570,17 @@ class VDSMHost(BaseHost):
 
         return v2v_args, v2v_env
 
-    def set_user(self, data):
-        """ Possibly switch to VDSM user """
-
+    def get_uid(self, data):
+        """ Tell under which user to run virt-v2v """
         if 'export_domain' in data:
             # Need to be root to mount NFS share
-            return
+            return 0
+        return VDSMHost.VDSM_UID
 
-        uid = os.geteuid()
-        if uid == VDSMHost.VDSM_UID:
-            # logging.debug('Already running as vdsm user')
-            return
-        elif uid == 0:
-            # We need to drop privileges and become vdsm user, but we also need
-            # the proper environment for the user which is tricky to get. The
-            # best thing we can do is spawn another instance. Unfortunately we
-            # have already read the data from stdin. logging.debug('Starting
-            # instance as vdsm user')
-            cmd = '/usr/bin/sudo'
-            args = [cmd, '-u', 'vdsm']
-            args.extend(sys.argv)
-            wrapper = subprocess.Popen(args,
-                                       stdin=subprocess.PIPE,
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE)
-            out, err = wrapper.communicate(json.dumps(data))
-            # logging.debug('vdsm instance finished')
-            sys.stdout.write(out)
-            sys.stderr.write(err)
-            # logging.debug('Terminating root instance')
-            sys.exit(wrapper.returncode)
-        sys.stderr.write('Need to run as vdsm user or root!\n')
-        sys.exit(1)
+    def get_gid(self, data):
+        """ Tell under which group to run virt-v2v """
+        return VDSMHost.VDSM_GID
+
 
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
@@ -827,6 +811,11 @@ class OutputParser(object):
     SSH_VMX_GUEST_NAME = re.compile(br'^displayName = "(.*)"$')
 
     def __init__(self, v2v_log):
+        # Wait for the log file to appear
+        for i in range(10):
+            if os.path.exists(v2v_log):
+                continue
+            time.sleep(1)
         self._log = open(v2v_log, 'rbU')
         self._current_disk = None
         self._current_path = None
@@ -979,7 +968,7 @@ def write_state(state):
 
 def prepare_command(data, v2v_caps, agent_sock=None):
     v2v_args = [
-        VIRT_V2V, '-v', '-x',
+        '-v', '-x',
         data['vm_name'],
         '--bridge', 'ovirtmgmt',
         '--root', 'first'
@@ -1025,6 +1014,40 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     return (v2v_args, v2v_env)
 
 
+def systemd_is_running(unit):
+    """ Check if systemd unit is running """
+    try:
+        subprocess.check_call(['systemctl', 'is-active', '--quiet', unit])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def systemd_return_code(unit):
+    """ Return code after the unit exited """
+    try:
+        output = subprocess.check_output([
+            'systemctl', 'show',
+            '--property=ExecMainStatus',
+            unit])
+    except subprocess.CalledProcessError:
+        logging.exception('Failed to get virt-v2v return code from systemd')
+        return -1
+    m = re.match(br'^ExecMainStatus=([0-9]+)$', output)
+    if m is None:
+        logging.error('Failed to parse return code from: %s', output)
+        return -1
+    return int(m.group(1))
+
+
+def systemd_kill(unit):
+    """ Kill unit """
+    try:
+        subprocess.check_call(['systemctl', 'kill', unit])
+    except subprocess.CalledProcessError:
+        logging.exception('Failed to kill virt-v2v unit')
+
+
 def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
@@ -1032,46 +1055,63 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
         data, v2v_args, v2v_env, v2v_caps)
 
     proc = None
-    with open(v2v_log, 'w') as log:
-        logging.info('Starting virt-v2v:')
-        log_command_safe(v2v_args, v2v_env)
-        proc = subprocess.Popen(
-                v2v_args,
-                stdin=DEVNULL,
-                stderr=subprocess.STDOUT,
-                stdout=log,
-                env=v2v_env,
-                )
+    logging.info('Starting virt-v2v:')
+    log_command_safe(v2v_args, v2v_env)
+
+    unit = [
+        'systemd-run',
+        '--uid=%s' % host.get_uid(data),
+        '--gid=%s' % host.get_gid(data),
+        '/bin/sh', '-c', '"%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log)
+        ] + v2v_args
+
+    proc = subprocess.Popen(
+            unit,
+            stdin=DEVNULL,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
+            env=v2v_env,
+            )
+    run_output = proc.communicate()[0]
+    logging.info('systemd-run returned: %s', run_output)
+    m = re.search(br'\b(run-[0-9]+\.service)\.', run_output)
+    if m is None:
+        logging.error('Failed to find service name in output. Aborting...')
+        state['failed'] = True
+        write_state(state)
+        return
+    state['service_name'] = m.group(1)
 
     try:
         state['started'] = True
         state['pid'] = proc.pid
         write_state(state)
         with log_parser(v2v_log) as parser:
-            while proc.poll() is None:
+            while systemd_is_running(state['service_name']):
                 state = parser.parse(state)
                 write_state(state)
                 time.sleep(5)
-            logging.info('virt-v2v terminated with return code %d',
-                         proc.returncode)
+            code = systemd_return_code(state['service_name'])
+            logging.info('virt-v2v terminated with return code %d', code)
             state = parser.parse(state)
     except Exception:
+        state['failed'] = True
         logging.exception('Error while monitoring virt-v2v')
-        if proc.poll() is None:
-            logging.info('Killing virt-v2v process')
-            proc.kill()
+        logging.info('Killing virt-v2v process')
+        systemd_kill(state['service_name'])
 
-    state['return_code'] = proc.returncode
+    state['return_code'] = systemd_return_code(state['service_name'])
     write_state(state)
 
-    if proc.returncode != 0:
+    if state['return_code'] != 0:
         state['failed'] = True
     write_state(state)
 
 
-def write_password(password, password_files):
+def write_password(password, password_files, uid, gid):
     pfile = tempfile.mkstemp(suffix='.v2v')
     password_files.append(pfile[1])
+    os.fchown(pfile[0], uid, gid)
     os.write(pfile[0], bytes(password.encode('utf-8')))
     os.close(pfile[0])
     return pfile[1]
@@ -1217,7 +1257,6 @@ def main():
 
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
-    host.set_user(data)
 
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
@@ -1301,13 +1340,18 @@ def main():
         logging.info('Writing password file(s)')
         if 'vmware_password' in data:
             data['vmware_password_file'] = write_password(
-                    data['vmware_password'], password_files)
+                    data['vmware_password'], password_files,
+                    host.get_uid(data), host.get_gid(data))
         if 'rhv_password' in data:
             data['rhv_password_file'] = write_password(data['rhv_password'],
-                                                       password_files)
+                                                       password_files,
+                                                       host.get_uid(data),
+                                                       host.get_gid(data))
         if 'ssh_key' in data:
             data['ssh_key_file'] = write_password(data['ssh_key'],
-                                                  password_files)
+                                                  password_files,
+                                                  host.get_uid(data),
+                                                  host.get_gid(data))
 
         # Create state file before dumping the JSON
         state = {
