@@ -42,7 +42,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "9"
+VERSION = "9.1"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -146,19 +146,35 @@ class OSPHost(BaseHost):
 
     def handle_cleanup(self, data, state):
         """ Handle cleanup after failed conversion """
-        # Remove created ports
+        volumes = state['internal']['disk_ids'].values()
         ports = state['internal']['ports']
+        # Cancel transfers
+        try:
+            transfers = self._run_openstack([
+                'volume', 'transfer', 'request', 'list',
+                '--format', 'json',
+                ], data)
+            transfers = json.loads(transfers)
+            # Strangely, the keys are not lowercase
+            transfers = [t['ID'] for t in transfers if t['Volume'] in volumes]
+            if len(transfers) > 0:
+                trans_cmd = ['volume', 'transfer', 'request', 'delete']
+                trans_cmd.extend(transfers)
+                self._run_openstack(trans_cmd, data)
+        except subprocess.CalledProcessError as e:
+            logging.exception('Failed to remove transfer(s)')
+            logging.error('Command output:\n%s', e.output)
+        # Remove created ports
         if len(ports) > 0:
             logging.info('Removing ports: %r', ports)
             port_cmd = ['port', 'delete']
             port_cmd.extend(ports)
             try:
-                self._run_openstack(port_cmd, data)
+                self._run_openstack(port_cmd, data, destination=True)
             except subprocess.CalledProcessError as e:
                 logging.exception('Failed to remove port(s)')
                 logging.error('Command output:\n%s', e.output)
         # Remove volumes
-        volumes = state['internal']['disk_ids'].values()
         if len(volumes) > 0:
             logging.info('Removing volumes: %r', volumes)
             vol_cmd = ['volume', 'delete']
@@ -195,11 +211,25 @@ class OSPHost(BaseHost):
                           state['internal']['disk_ids'])
             logging.debug('Assumed volume list: %r', volumes)
             return False
-        # TODO: check disk existence
-        # We probably should check that the index in properties matches. But
-        # since we extract it from the command that sets the properties we can
-        # skip this step.
-        #
+        # Move volumes to destination project
+        for vol in volumes:
+            try:
+                logging.info('Transfering volume: %s', vol)
+                transfer = self._run_openstack([
+                    'volume', 'transfer', 'request', 'create',
+                    '--format', 'json',
+                    vol,
+                    ], data)
+                transfer = json.loads(transfer)
+                self._run_openstack([
+                    'volume', 'transfer', 'request', 'accept',
+                    '--auth-key', transfer['auth_key'],
+                    transfer['id']
+                    ], data, destination=True)
+            except subprocess.CalledProcessError as e:
+                logging.exception('Failed to transfer volume')
+                logging.error('Command output:\n%s', e.output)
+                return False
         # Create ports
         ports = []
         for nic in data['network_mappings']:
@@ -216,7 +246,7 @@ class OSPHost(BaseHost):
                     '--fixed-ip', 'ip-address=%s' % nic['ip_address'],
                     ])
             try:
-                port = self._run_openstack(port_cmd, data)
+                port = self._run_openstack(port_cmd, data, destination=True)
             except subprocess.CalledProcessError as e:
                 logging.exception('Failed to create port')
                 logging.error('Command output:\n%s', e.output)
@@ -243,7 +273,7 @@ class OSPHost(BaseHost):
         os_command.append(data['vm_name'])
         # Let's get rolling...
         try:
-            self._run_openstack(os_command, data)
+            self._run_openstack(os_command, data, destination=True)
             return True
         except subprocess.CalledProcessError as e:
             logging.exception('Create VM failed')
@@ -318,11 +348,21 @@ class OSPHost(BaseHost):
         enumid = (lambda i: chr(ord('a') + i))
         return 'vd%s%s' % ('' if one == 0 else enumid(one-1), enumid(two))
 
-    def _run_openstack(self, cmd, data):
+    def _run_openstack(self, cmd, data, destination=False):
+        """
+        Run the openstack commands with necessary arguments. When @destination
+        is True the command is run in destination project. Otherwise it is run
+        in current project.
+        """
         command = ['openstack']
         # Convert to arguments of the form os-something
         for k, v in six.iteritems(data['osp_environment']):
             command.append('--%s=%s' % (k.lower().replace('_', '-'), v))
+        if destination:
+            # It doesn't matter if there already is --os-project-name or
+            # --os-project-id. The last argument takes precedence.
+            command.append('--os-project-id=%s' %
+                           data['osp_destination_project_id'])
         command.extend(cmd)
         log_command_safe(command, {})
         return subprocess.check_output(command, stderr=subprocess.STDOUT)
