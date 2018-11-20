@@ -38,3 +38,17 @@
       if [ $errors -ne 0 ]; then
           exit 1
       fi
+
+# There is no YAML editing module. Create the clouds.yaml only if it does not
+# exist.
+- name: Configure OpenStack environment
+  copy:
+    dest: ~root/.config/openstack/clouds.yaml
+    owner: root
+    group: root
+    mode: 0600
+    force: "no"
+    content: |
+      clouds:
+        v2v_insecure:
+          verify: false
