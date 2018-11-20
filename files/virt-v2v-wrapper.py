@@ -42,7 +42,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "9.1"
+VERSION = "9.2"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -176,13 +176,23 @@ class OSPHost(BaseHost):
                 logging.error('Command output:\n%s', e.output)
         # Remove volumes
         if len(volumes) > 0:
-            logging.info('Removing volumes: %r', volumes)
+            # We don't know in which project the volumes are and figuring that
+            # out using openstack command can be impractical in large
+            # environments. Let's just try to remove them from both.
+            logging.info('Removing volume(s): %r', volumes)
             vol_cmd = ['volume', 'delete']
             vol_cmd.extend(volumes)
             try:
                 self._run_openstack(vol_cmd, data)
             except subprocess.CalledProcessError as e:
-                logging.exception('Failed to remove volumes(s)')
+                logging.exception(
+                    'Failed to remove volumes(s) from current project')
+                logging.error('Command output:\n%s', e.output)
+            try:
+                self._run_openstack(vol_cmd, data, destination=True)
+            except subprocess.CalledProcessError as e:
+                logging.exception(
+                    'Failed to remove volumes(s) from destination project')
                 logging.error('Command output:\n%s', e.output)
 
     def handle_finish(self, data, state):
