@@ -310,6 +310,10 @@ class OSPHost(BaseHost):
             v2v_args.extend([
                 '-os', data['osp_volume_type_id'],
                 ])
+        if data['insecure_connection']:
+            v2v_args.extend([
+                '-oo', 'verify-server-certificate=false'
+                ])
         return v2v_args, v2v_env
 
     def set_user(self, data):
@@ -334,6 +338,11 @@ class OSPHost(BaseHost):
                 ]:
             if k not in data:
                 error('Missing argument: %s' % k)
+        if 'insecure_connection' not in data:
+            data['insecure_connection'] = False
+        if data.get('insecure_connection', False):
+            logging.info(
+                'SSL verification is disabled for OpenStack connections')
         osp_arg_re = re.compile('os[-_]', re.IGNORECASE)
         for k in data['osp_environment'].keys():
             if not osp_arg_re.match(k[:3]):
@@ -365,6 +374,8 @@ class OSPHost(BaseHost):
         in current project.
         """
         command = ['openstack']
+        if data.get('insecure_connection', False):
+            command.append('--insecure')
         # Convert to arguments of the form os-something
         for k, v in six.iteritems(data['osp_environment']):
             command.append('--%s=%s' % (k.lower().replace('_', '-'), v))
