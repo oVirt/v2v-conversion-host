@@ -1,4 +1,8 @@
 ---
+- assert:
+    that: "v2v_build_dir is defined"
+    msg: "Variable 'v2v_build_dir' is mandatory to build VDDK plugin for nbdkit."
+
 # ------------------------- Install build dependencies -------------------------
 - name: Register the list of installed packages before building nbdkit plugin
   yum:
@@ -7,14 +11,13 @@
 
 - name: Install build dependencies
   yum:
-    state: present
-    name: "{{ item }}"
-  with_items:
-    - gcc
-    - make
-    - rpm-build
-    - yum-utils
-    - nbdkit-devel
+    state: "{{ v2v_yum_check }}"
+    name:
+      - gcc
+      - make
+      - rpm-build
+      - yum-utils
+      - nbdkit-devel
 
 - name: Ensure gnutls-devel is installed when on CentOS
   yum:
@@ -39,7 +42,7 @@
     state: directory
     mode: 0700
 
-- include_tasks: "nbdkit-source-{{ ansible_distribution | lower }}.yml"
+- include_tasks: "install-transport-vddk-nbdkit-source-{{ ansible_distribution | lower }}.yml"
 
 # --------------- Adjust the spec file to match the environment ----------------
 - name: Locate the spec file
@@ -109,6 +112,5 @@
 
 - name: Ensure build dependencies are removed
   yum:
-    name: "{{ item.name }}"
+    name: "{{ pkgs_after_builddeps.results | difference(pkgs_before_builddeps.results) }}"
     state: absent
-  with_items: "{{ pkgs_after_builddeps.results | difference(pkgs_before_builddeps.results) }}"

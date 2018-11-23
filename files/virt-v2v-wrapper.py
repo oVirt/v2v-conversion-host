@@ -727,7 +727,7 @@ class VDSMHost(BaseHost):
 
             if 'metadata' in sub[2] and \
                     os.path.basename(sub[0]) == 'dom_md' and \
-                    self.is_iso_domain(os.path.join(sub[0], 'metadata')):
+                    self._is_iso_domain(os.path.join(sub[0], 'metadata')):
                 return os.path.join(
                     os.path.dirname(sub[0]),
                     'images',

@@ -1,61 +1,36 @@
 ---
 # ----------------------------- Initial checks -------------------------------
 
-# Check that the required variables are set
-- assert:
-    that: "{{ item }} is defined"
-    msg: "Variable '{{ item }}' is mandatory to {{ role_action }} VDDK pluging."
-  with_items:
-    - v2v_build_dir
-    - v2v_vddk_install_dir
-    - v2v_vddk_package_name
-
-# Include the check tasks, to avoid running the installation if not necessary
-- include_tasks: check.yml
-
-# If VDDK plugin is already installed and we have not set vddk_override, then skip.
-- assert:
-    msg: "nbdkit is already installed and 'v2v_vddk_override' is not set to true"
-    that:
-      - not v2v_nbdkit_plugin_working or v2v_vddk_override
-
 - include_tasks: "repositories-{{ ansible_distribution | lower }}.yml"
 
-- name: Ensure nbdkit packages are installed
-  yum:
-    name: "{{ item }}"
-    state: "{{ v2v_yum_check }}"
-  with_items:
-    - nbdkit
-    - nbdkit-plugin-python2
+- include_tasks: "install-virt-v2v.yml"
 
-- name: Register nbdkit version
-  shell: rpm -qa nbdkit | cut -d- -f2
-  register: pkg_nbdkit
 
-- include_tasks: "vddk-install.yml"
+# ------------------- Transport Method Configuration -----------------------
 
-# With nbdkit before 1.2.4 we had to build our own version of VDDK plugin
-- include_tasks: "nbdkit-plugin-vddk-rpm.yml"
+- include_tasks: "install-transport-{{ transport_method }}.yml"
+  loop: "{{ v2v_transport_methods }}"
+  loop_control:
+    loop_var: transport_method
+
+
+# ----------------------- Provider Configuration ----------------------------
+
+- include_tasks: "install-provider-{{ v2v_host_type }}.yml"
+
+- set_fact:
+    manageiq_provider: "{{ item }}"
   when:
-    - pkg_nbdkit.stdout is version_compare('1.2.4', '<')
+    - "item.name == manageiq_provider_name"
+  with_items: "{{ manageiq_providers }}"
 
-# With nbdkit 1.2.4 and newer we just make sure the package is installed
-- name: Make sure VDDK plugin is installed
-  yum:
-    state: "{{ v2v_yum_check }}"
-    name: nbdkit-plugin-vddk
+- block:
+    - include_tasks: "install-provider-ssl-ca-chain.yml"
+    - include_tasks: "install-manageiq-create-conversion-host.yml"
+  when:
+    - "manageiq_provider is defined"
 
-- name: Install virt-v2v
-  yum:
-    state: "{{ v2v_yum_check }}"
-    name: virt-v2v
 
-- name: Install virt-v2v wrapper
-  copy:
-    src: "virt-v2v-wrapper.py"
-    dest: "/usr/bin/"
-    mode: 0755
+# ----------------------- Validate Installation -----------------------------
 
-- include_tasks: "validate-{{v2v_host_type}}.yml"
-- include_tasks: "install-{{v2v_host_type}}.yml"
+- include_tasks: "install-validate-{{ v2v_host_type }}.yml"
