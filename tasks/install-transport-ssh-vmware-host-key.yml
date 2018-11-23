@@ -13,6 +13,6 @@
       Host {{ vmware_host }}
         User {{ hostvars[vmware_host]['conversion_ssh_username'] | default('root') }}
         IdentityFile {{ ssh_config_path }}/{{ vmware_host }}
-    create: yes
+    create: true
     owner: "{{ ssh_config_owner }}"
     mode: 0600

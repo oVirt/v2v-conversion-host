@@ -1,18 +1,18 @@
 ---
 - include_tasks: "install-manageiq-build-conversion-host-resource-{{ v2v_host_type }}.yml"
 
-#- uri:
-#    url: "https://{{ manageiq_url }}/api/conversion_hosts"
-#    user: "{{ manageiq_username }}"
-#    password: "{{ manageiq_password }}"
-#    method: "POST"
-#    validate_certs: no 
-#    body_format: "json"
-#    body:
-#      action: "create"
-#      resource: "{{ manageiq_cloudforms_conversion_host_resource }}"
-#  when:
-#    - "v2v_cloudforms_conversion_host_resource is defined"
+# - uri:
+#     url: "https://{{ manageiq_url }}/api/conversion_hosts"
+#     user: "{{ manageiq_username }}"
+#     password: "{{ manageiq_password }}"
+#     method: "POST"
+#     validate_certs: false
+#     body_format: "json"
+#     body:
+#       action: "create"
+#       resource: "{{ manageiq_cloudforms_conversion_host_resource }}"
+#   when:
+#     - "v2v_cloudforms_conversion_host_resource is defined"
 
 - set_fact:
     manageiq_conversion_host_resource_tags:
@@ -45,7 +45,7 @@
     user: "{{ manageiq_username }}"
     password: "{{ manageiq_password }}"
     method: "POST"
-    validate_certs: no
+    validate_certs: false
     body_format: "json"
     body:
       action: "assign"

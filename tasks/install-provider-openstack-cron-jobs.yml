@@ -9,13 +9,13 @@
       #!/bin/sh
       errors=0
       if [ -d /var/log/virt-v2v ] ; then
-          /usr/bin/find /var/log/virt-v2v -type f -mtime +30 -exec /bin/rm -f '{}' \; 
+          /usr/bin/find /var/log/virt-v2v -type f -mtime +30 -exec /bin/rm -f '{}' \;
           EXITVALUE=$?
           if [ $EXITVALUE != 0 ]; then
               /usr/bin/logger -t virt-v2v-logs "ALERT clean of old import log files exited abnormally with [$EXITVALUE]"
               errors=$((errors+1))
           fi
-      fi 
+      fi
       if [ $errors -ne 0 ]; then
           exit 1
-      fi 
+      fi
