@@ -5,7 +5,7 @@
     - "item.endpoint.role == 'default'"
     - "item.endpoint.certificate_authority is defined"
   with_items: "{{ manageiq_provider.connection_configurations }}"
- 
+
 - block:
     - name: Create CA chain file in anchors
       copy:
@@ -14,9 +14,9 @@
         owner: root
         group: root
         mode: 0644
- 
+
     - name: Update the ca-trust bundle
       command: /usr/bin/update-ca-trust
- 
+
   when:
     - "provider_ssl_ca_chain is defined"
