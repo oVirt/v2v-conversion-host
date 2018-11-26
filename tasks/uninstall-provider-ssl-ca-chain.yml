@@ -1,5 +1,5 @@
 ---
-- name: Create CA chain file in anchors
+- name: Delete CA chain file in anchors
   file:
     dest: "/etc/pki/ca-trust/source/anchors/{{ manageiq_provider.hostname }}-ca-chain.pem"
     state: absent
