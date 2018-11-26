@@ -1,7 +1,7 @@
 ---
 # ----------------------------- Initial checks -------------------------------
 
-- include_tasks: "repositories-{{ ansible_distribution | lower }}.yml"
+- include_tasks: "install-repositories.yml"
 
 - include_tasks: "install-virt-v2v.yml"
 

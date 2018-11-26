@@ -12,7 +12,7 @@
 
 - block:
     - set_fact:
-      manageiq_get_conversion_host_resource: "{{ manageiq_get_conversion_host_resources_json.json | json_query('resources[*]') | first }}"
+        manageiq_get_conversion_host_resource: "{{ manageiq_get_conversion_host_resources_json.json | json_query('resources[*]') | first }}"
 
     - set_fact:
         manageiq_post_conversion_host_resource:

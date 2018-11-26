@@ -6,7 +6,7 @@
 #     user: "{{ manageiq_username }}"
 #     password: "{{ manageiq_password }}"
 #     method: "POST"
-#     validate_certs: false
+#     validate_certs: no
 #     body_format: "json"
 #     body:
 #       action: "create"

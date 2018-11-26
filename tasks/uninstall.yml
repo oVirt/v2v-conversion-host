@@ -1,37 +1,23 @@
 ---
-# ----------------------------- Initial checks -------------------------------
+# ----------------------- Provider Configuration ----------------------------
 
-# Check that the required variables are set
-- assert:
-    that: "{{ item }} is defined"
-    msg: "Variable '{{ item }}' is mandatory to {{ role_action }} VDDK pluging."
-  with_items:
-    - v2v_vddk_install_dir
+- set_fact:
+    manageiq_provider: "{{ item }}"
+  when:
+    - "item.name == manageiq_provider_name"
+  with_items: "{{ manageiq_providers }}"
 
-- name: Ensure nbdkit-* package are not installed
-  yum:
-    name: "{{ item }}"
-    state: absent
-  with_items:
-    - nbdkit
-    - nbdkit-plugin-vddk
+- block:
+    - include_tasks: "uninstall-provider-ssl-ca-chain.yml"
+    - include_tasks: "uninstall-manageiq-conversion-host.yml"
+  when:
+    - "manageiq_provider is defined"
 
-- name: Remove packages repository
-  file:
-    path: /etc/yum.repos.d/v2v-nbdkit.repo
-    state: absent
+- include_tasks: "uninstall-provider-{{ v2v_host_type }}.yml"
 
-- name: Remove EPEL repository
-  yum:
-    name: epel-release
-    state: absent
+- include_tasks: "uninstall-transport-{{ transport_method }}.yml"
+  loop: "{{ v2v_transport_methods }}"
+  loop_control:
+    loop_var: transport_method
 
-- name: Remove VDDK library
-  file:
-    path: "{{ v2v_vddk_install_dir }}/vmware-vix-disklib-distrib"
-    state: absent
-
-- name: Remove virt-v2v wrapper
-  file:
-    path: "/usr/bin/virt-v2v-wrapper.sh"
-    state: absent
+- include_tasks: "uninstall-virt-v2v-wrapper.yml"
