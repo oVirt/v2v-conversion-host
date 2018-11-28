@@ -15,6 +15,7 @@
 
 - include_tasks: "install-transport-ssh-vmware-host-key.yml"
   when:
+    - "'vmware_hosts' in groups"
     - "hostvars[vmware_host]['conversion_ssh_private_key'] is defined"
   loop: "{{ groups['vmware_hosts'] }}"
   loop_control:

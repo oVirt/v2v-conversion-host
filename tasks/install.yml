@@ -26,7 +26,7 @@
 
 - block:
     - include_tasks: "install-provider-ssl-ca-chain.yml"
-    - include_tasks: "install-manageiq-create-conversion-host.yml"
+    - include_tasks: "install-manageiq-conversion-host.yml"
   when:
     - "manageiq_provider is defined"
 
