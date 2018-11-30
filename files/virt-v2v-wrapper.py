@@ -255,6 +255,8 @@ class OSPHost(BaseHost):
                 port_cmd.extend([
                     '--fixed-ip', 'ip-address=%s' % nic['ip_address'],
                     ])
+            for grp in data['osp_security_groups_ids']:
+                port_command.extend(['--security-group', grp])
             try:
                 port = self._run_openstack(port_cmd, data, destination=True)
             except subprocess.CalledProcessError as e:
@@ -270,8 +272,6 @@ class OSPHost(BaseHost):
             'server', 'create',
             '--flavor', data['osp_flavor_id'],
             ]
-        for grp in data['osp_security_groups_ids']:
-            os_command.extend(['--security-group', grp])
         os_command.extend(['--volume', volumes[0]])
         for i in xrange(1, len(volumes)):
             os_command.extend([
