@@ -255,6 +255,8 @@ class OSPHost(BaseHost):
                 port_cmd.extend([
                     '--fixed-ip', 'ip-address=%s' % nic['ip_address'],
                     ])
+            for grp in data['osp_security_groups_ids']:
+                port_cmd.extend(['--security-group', grp])
             try:
                 port = self._run_openstack(port_cmd, data, destination=True)
             except subprocess.CalledProcessError as e:
@@ -727,7 +729,7 @@ class VDSMHost(BaseHost):
 
             if 'metadata' in sub[2] and \
                     os.path.basename(sub[0]) == 'dom_md' and \
-                    self.is_iso_domain(os.path.join(sub[0], 'metadata')):
+                    self._is_iso_domain(os.path.join(sub[0], 'metadata')):
                 return os.path.join(
                     os.path.dirname(sub[0]),
                     'images',
@@ -739,7 +741,7 @@ class VDSMHost(BaseHost):
         Check if domain is ISO domain. @path is path to domain metadata file
         """
         try:
-            logging.debug('is_iso_domain check for %s', path)
+            logging.debug('_is_iso_domain check for %s', path)
             with open(path, 'r') as f:
                 for line in f:
                     if line.rstrip() == 'CLASS=Iso':
