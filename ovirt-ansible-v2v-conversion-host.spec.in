@@ -41,6 +41,21 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Wed Dec  5 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.8.0-1
+- Wrapper changes:
+  * Fix check for ISO domains in RHV
+  * Set security groups on ports instead of instances (BZ#1654861)
+  * Allow disabling of SSL verification for OSP
+  * Remove OSP volumes from destination project
+  * Fix OSP commands to operate in destination project
+- Roles changes:
+  * Add configuration of SSH transport: install private keys for VMware hosts and set .ssh/config
+  * Add configuration of ca-trust for providers certificates to avoid using insecure connection
+  * Add creation of ManageIQ conversion host record and tagging of associated resource
+  * Allow to not configure VDDK if vddk transport method is not set for conversion host
+  * Tasks heavily reorganized
+  * Remove nbdkit-* uninstallation as it also uninstalls vdsm
+
 * Thu Oct 18 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.7.0-1
 - Wrapper changes
   - general refactoring to support different conversion targets
