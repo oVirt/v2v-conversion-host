@@ -4,14 +4,15 @@ There are many variables that can be configured to tune the setup.
 Some are useful only in development environment and some are not really meant
 to be changed.
 
-| Variable              | Default value | Description                                                                                                                           |
-| --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| v2v_transport_methods |               | List of transport methods to configure on the conversion host. Valid values: `vddk`, 'ssh`.                                           |
-| v2v_vddk_package_name |               | File name of the .tar.gz package with VDDK library. It is looked for in /tmp.                                                         |
-| v2v_vddk_package_url  |               | URL to the VDDK library package (will be downloaded to `/tmp`). Note that the file name must much the one in `v2v_vddk_package_name`. |
-| v2v_vddk_override     | false         | Normally the install role is not run if the plugin is already installed. To force the deployment set this variable to `true`.         |
-| v2v_checks_override   | false         | The install role does performs some compatibility checks. By setting `v2v_checks_override` to `true` one can disable them.            |
-| v2v_yum_check         | latest        | Can be used to change the requirement on installed packages. Normally we check if the installed packages are at the latest version. This can cause troubles on disconnected or unconfigured systems. In that case the check can be ... by setting the value to `present`. (Since 1.7) |
+| Variable                       | Default value | Description                                                                                                                           |
+| -----------------------------  | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| v2v_transport_methods          |               | List of transport methods to configure on the conversion host. Valid values: `vddk`, 'ssh`.                                           |
+| v2v_max_concurrent_conversions |               | Override the maximum concurrent conversions per host in ManageIQ configuration.                                                       |
+| v2v_vddk_package_name          |               | File name of the .tar.gz package with VDDK library. It is looked for in /tmp.                                                         |
+| v2v_vddk_package_url           |               | URL to the VDDK library package (will be downloaded to `/tmp`). Note that the file name must much the one in `v2v_vddk_package_name`. |
+| v2v_vddk_override              | false         | Normally the install role is not run if the plugin is already installed. To force the deployment set this variable to `true`.         |
+| v2v_checks_override            | false         | The install role does performs some compatibility checks. By setting `v2v_checks_override` to `true` one can disable them.            |
+| v2v_yum_check                  | latest        | Can be used to change the requirement on installed packages. Normally we check if the installed packages are at the latest version. This can cause troubles on disconnected or unconfigured systems. In that case the check can be ... by setting the value to `present`. (Since 1.7) |
 
 As the conversion host is used from a ManageIQ appliance, we provide variables
 to configure the conversion host records in ManageIQ, as well as the conversion
@@ -61,6 +62,7 @@ all:
       v2v_transport_methods:
         - vddk
         - ssh
+      v2v_max_concurrent_conversions: 20
       manageiq_provider_name: Shiny RHV
     chost2.example.com:
       v2v_host_type: openstack
