@@ -49,11 +49,6 @@ conversion host. This can be done by adding a `vmware_hosts` group to the
 inventory. Then, the `conversion_ssh_private_key` has to be set as a variable
 for the group or for each host. See example below.
 
-## To be documented...
-
-* `v2v_repo_rpms_name`, `v2v_repo_rpms_url`, `v2v_repo_srpms_name`,
-  `v2v_repo_srpms_url`:
-
 ## Example inventory
 
 ```yaml

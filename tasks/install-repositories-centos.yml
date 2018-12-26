@@ -1,5 +1,0 @@
----
-- name: Ensure EPEL repository is installed
-  yum:
-      state: "{{ v2v_yum_check }}"
-      name: epel-release
