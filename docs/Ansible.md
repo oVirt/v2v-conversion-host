@@ -17,12 +17,13 @@ As the conversion host is used from a ManageIQ appliance, we provide variables
 to configure the conversion host records in ManageIQ, as well as the conversion
 host with ManageIQ providers configuration.
 
-| Variable           | Default value | Description                                                                              |
-| ------------------ | ------------- | ---------------------------------------------------------------------------------------- |
-| manageiq_url       |               | Base URL for ManageIQ appliance with API role                                            |
-| manageiq_username  | admin         | Username to connect to ManageIQ                                                          |
-| manageiq_password  | smartvm       | Password to connect to ManageIQ                                                          |
-| manageiq_providers |               | List of definitions of ManageIQ providers. Each provider is a dictionary described below |
+| Variable                | Default value | Description                                                                              |
+| ----------------------- | ------------- | ---------------------------------------------------------------------------------------- |
+| manageiq_url            |               | Base URL for ManageIQ appliance with API role                                            |
+| manageiq_username       | admin         | Username to connect to ManageIQ                                                          |
+| manageiq_password       | smartvm       | Password to connect to ManageIQ                                                          |
+| manageiq_validate_certs | true          | Whether to validate certificate of ManageIQ server                                       |
+| manageiq_providers      |               | List of definitions of ManageIQ providers. Each provider is a dictionary described below |
 
 A ManageIQ provider has the following attributes:
 

@@ -6,7 +6,7 @@
     user: "{{ manageiq_username }}"
     password: "{{ manageiq_password }}"
     method: "POST"
-    validate_certs: false
+    validate_certs: "{{ manageiq_validate_certs | default(true) }}"
     body_format: "json"
     body:
       action: "create"
@@ -46,7 +46,7 @@
         user: "{{ manageiq_username }}"
         password: "{{ manageiq_password }}"
         method: "POST"
-        validate_certs: false
+        validate_certs: "{{ manageiq_validate_certs | default(true) }}"
         body_format: "json"
         body:
           action: "assign"

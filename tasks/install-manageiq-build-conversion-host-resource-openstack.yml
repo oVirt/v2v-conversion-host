@@ -7,7 +7,7 @@
     user: "{{ manageiq_username }}"
     password: "{{ manageiq_password }}"
     method: GET
-    validate_certs: false
+    validate_certs: "{{ manageiq_validate_certs | default(true) }}"
   register: manageiq_get_conversion_host_resources_json
 
 - block:
