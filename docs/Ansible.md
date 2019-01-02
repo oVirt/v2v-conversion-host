@@ -47,10 +47,22 @@ can specify if connection is secure: `non-ssl`, `ssl-without-validation` or
 undercloud CA (/etc/pki/ca-trust/source/anchors/undercloud-cacert.pem) and
 the overcloud CA (/etc/pki/ca-trust/source/anchors/overcloud-cacert.pem).
 
-Also, to configure SSH transport, we have to install the private key on the
+## SSH transport configuration
+
+To configure SSH transport, we have to install the private key on the
 conversion host. This can be done by adding a `vmware_hosts` group to the
 inventory. Then, the `conversion_ssh_private_key` has to be set as a variable
 for the group or for each host. See example below.
+
+An alternative is to set the variable `vmware_hosts` which is a list of
+dictionaries. Each dictionary must have the following attributes:
+
+| Attribute                  | Description                                           |
+| -------------------------- | ----------------------------------------------------- |
+| name                       | Name of the VMWare host.                              |
+| connection_ssh_private_key | The private key to use to connect to the VMware host. |
+| connection_ssh_username    | The username to use to connect to the VMware host.    |
+
 
 ## Example inventory
 
@@ -183,4 +195,24 @@ all:
                 hgpqdqIdwkeR+c+fbYZKXBOBotCcmEXoHuIlZ9GhIti7gwSBSRWEjkPEL2j8R/zK
                 k2ikyNbbVRx/13AwDgwMMTkyLjE2OC4yNC4y
                 -----END TRUSTED CERTIFICATE-----
+    vmware_hosts:
+      - name: esx3.example.com
+        conversion_ssh_username: esx_user
+        conversion_ssh_private_key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcn
+          NhAAAAAwEAAQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6
+          y8J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq
+          /1IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAIYq1X3AatV9wEAAAAH
+          c3NoLXJzYQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6y8
+          J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq/1
+          IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAADAQABAAAAgQCBjwQVrn
+          4X3bY4vpZ8IJUIm7WEf8ueMgduZBvfXDg65pBYImTxsiRasDJmUEHzRZBvG6melWrsWb3q
+          leB7V32lMNxXmFAORELLjo0LQUIROH+YjETxmEzaAvGK/PfNDTXuTKFlRp2+VMJIF+S0V/
+          S4AsJ6YZkxH78RoexiYHFYMQAAAEEAtGPkFquU/Qy4POAf9HOb4Xe+dgMgENs+rZV3gzeD
+          7wnQP1M7sZwGKhde+BlhiuSgkUW6+2Am/ui7nvOwt+9begAAAEEA7r1VsA+y7tljxwHWYT
+          8lx5NIfFCfIaB3VpvlBltBxI0T56qMBxVIPoEgCcFL3CVtRLZ/KukgJKiXEk/EREgNFwAA
+          AEEAxqjQUreggg6tzLrrDOchATWDxZH/KBpOpalrWc9afbDAbiOWidR9lex+X+pXHa1kYM
+          ++vZcXPGeWRqLYHReseQAAAB9mZHVwb250QHNhbWFlbC5ob21lLmV2ZW5pdC5pbmZvAQI=
+          -----END RSA PRIVATE KEY-----
 ```
