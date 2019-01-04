@@ -31,6 +31,7 @@ A ManageIQ provider has the following attributes:
 | Attribute                 | Description                                                                                 |
 | ------------------------- | ------------------------------------------------------------------------------------------- |
 | name                      | Name of the provider in CloudForms. Accepts spaces and upper/lower case.                    |
+| hostname                  | Hostname of the provider endpoint.                                                          |
 | connection_configurations | A list of additional endpoint configuration items. The possible values are described below. |
 
 The `connection_configurations` for Red Hat Virtualization has only one
@@ -105,6 +106,7 @@ all:
     manageiq_zone_id: "42000000000001"
     manageiq_providers:
       - name: "Shiny RHV"
+        hostname: "rhvm.example.com"
         connection_configurations:
           - endpoint:
               role: "default"
@@ -133,6 +135,7 @@ all:
                 19n+csCTKX0uu6MTLAkDejfM/Ws=
                 -----END CERTIFICATE-----
       - name: "Brilliant OpenStack"
+        hostname: "openstack.example.com"
         connection_configurations:
           - endpoint:
               role: "default"
