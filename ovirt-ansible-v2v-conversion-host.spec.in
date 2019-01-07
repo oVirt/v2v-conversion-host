@@ -41,6 +41,16 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Mon Jan  7 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.9.0-1
+- Wrapper changes:
+  * Prevent passwords leaking in error reports from failed openstack commands
+- Roles changes:
+  * Allow setting SSH connection to VMware hosts via a variable and
+    remove inventory approach for SSH keys
+  * Add ability to set maximum concurrent conversions in ManageIQ
+  * Variabilize certificate validation for ManageIQ
+  * Remove repositories configuration
+
 * Wed Dec  5 2018 Tomáš Golembiovský <tgolembi@redhat.com> 1.8.0-1
 - Wrapper changes:
   * Fix check for ISO domains in RHV
