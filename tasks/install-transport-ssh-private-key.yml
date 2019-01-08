@@ -13,7 +13,7 @@
 
     - name: Create the SSH private key file
       copy:
-        path: "{{ ssh_config_path }}/id_rsa"
+        dest: "{{ ssh_config_path }}/id_rsa"
         content: "{{ v2v_ssh_private_key }}"
         owner: "{{ ssh_config_owner }}"
         mode: 0600
