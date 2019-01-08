@@ -11,6 +11,7 @@ to be changed.
 | v2v_vddk_package_name          |               | File name of the .tar.gz package with VDDK library. It is looked for in /tmp.                                                         |
 | v2v_vddk_package_url           |               | URL to the VDDK library package (will be downloaded to `/tmp`). Note that the file name must much the one in `v2v_vddk_package_name`. |
 | v2v_vddk_override              | false         | Normally the install role is not run if the plugin is already installed. To force the deployment set this variable to `true`.         |
+| v2v_ssh_private_key            |               | The private key to use to connect to the VMware host.                                                                                 |
 | v2v_checks_override            | false         | The install role does performs some compatibility checks. By setting `v2v_checks_override` to `true` one can disable them.            |
 | v2v_yum_check                  | latest        | Can be used to change the requirement on installed packages. Normally we check if the installed packages are at the latest version. This can cause troubles on disconnected or unconfigured systems. In that case the check can be ... by setting the value to `present`. (Since 1.7) |
 
@@ -47,18 +48,6 @@ can specify if connection is secure: `non-ssl`, `ssl-without-validation` or
 undercloud CA (/etc/pki/ca-trust/source/anchors/undercloud-cacert.pem) and
 the overcloud CA (/etc/pki/ca-trust/source/anchors/overcloud-cacert.pem).
 
-## SSH transport configuration
-
-To configure SSH transport, we have to install the private key on the
-conversion host. This can be done by setting the `vmware_hosts` variable which
-is a list of dictionaries. Each dictionary must have the following attributes:
-
-| Attribute                  | Description                                           |
-| -------------------------- | ----------------------------------------------------- |
-| name                       | Name of the VMWare host.                              |
-| connection_ssh_private_key | The private key to use to connect to the VMware host. |
-| connection_ssh_username    | The username to use to connect to the VMware host.    |
-
 
 ## Example inventory
 
@@ -85,6 +74,23 @@ all:
     v2v_repo_srpms_url: "http://content.example.com/v2v-nbdkit-src-rpms"
     v2v_vddk_package_name: "VMware-vix-disklib-6.5.2-6195444.x86_64.tar.gz"
     v2v_vddk_package_url: "http://content.example.com/{{ v2v_vddk_package_name }}"
+    v2v_ssh_private_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcn
+      NhAAAAAwEAAQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6
+      y8J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq
+      /1IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAIYq1X3AatV9wEAAAAH
+      c3NoLXJzYQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6y8
+      J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq/1
+      IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAADAQABAAAAgQCBjwQVrn
+      4X3bY4vpZ8IJUIm7WEf8ueMgduZBvfXDg65pBYImTxsiRasDJmUEHzRZBvG6melWrsWb3q
+      leB7V32lMNxXmFAORELLjo0LQUIROH+YjETxmEzaAvGK/PfNDTXuTKFlRp2+VMJIF+S0V/
+      S4AsJ6YZkxH78RoexiYHFYMQAAAEEAtGPkFquU/Qy4POAf9HOb4Xe+dgMgENs+rZV3gzeD
+      7wnQP1M7sZwGKhde+BlhiuSgkUW6+2Am/ui7nvOwt+9begAAAEEA7r1VsA+y7tljxwHWYT
+      8lx5NIfFCfIaB3VpvlBltBxI0T56qMBxVIPoEgCcFL3CVtRLZ/KukgJKiXEk/EREgNFwAA
+      AEEAxqjQUreggg6tzLrrDOchATWDxZH/KBpOpalrWc9afbDAbiOWidR9lex+X+pXHa1kYM
+      ++vZcXPGeWRqLYHReseQAAAB9mZHVwb250QHNhbWFlbC5ob21lLmV2ZW5pdC5pbmZvAQI=
+      -----END RSA PRIVATE KEY-----
     manageiq_url: "https://miq.example.com"
     manageiq_username: "admin"
     manageiq_password: "smartvm"
@@ -168,24 +174,4 @@ all:
                 hgpqdqIdwkeR+c+fbYZKXBOBotCcmEXoHuIlZ9GhIti7gwSBSRWEjkPEL2j8R/zK
                 k2ikyNbbVRx/13AwDgwMMTkyLjE2OC4yNC4y
                 -----END TRUSTED CERTIFICATE-----
-    vmware_hosts:
-      - name: esx1.example.com
-        conversion_ssh_username: esx_user
-        conversion_ssh_private_key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAlwAAAAdzc2gtcn
-          NhAAAAAwEAAQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6
-          y8J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq
-          /1IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAIYq1X3AatV9wEAAAAH
-          c3NoLXJzYQAAAIEAuUPezWEyOS+KbDj+GWjvQUjgugMvPREhHsTuqhvNs3rU7qkQYit6y8
-          J5PFiuQAViDNvhjyESBh1QwT45utZUkUD0wrHJ/lrxmM9NKaDaYr/rNM97Gkao8Jp9aq/1
-          IfQXYrlxIcdOpTTQRIib1f0QR1Rgo7Ekz0tNXvt3AXbqo98AAAADAQABAAAAgQCBjwQVrn
-          4X3bY4vpZ8IJUIm7WEf8ueMgduZBvfXDg65pBYImTxsiRasDJmUEHzRZBvG6melWrsWb3q
-          leB7V32lMNxXmFAORELLjo0LQUIROH+YjETxmEzaAvGK/PfNDTXuTKFlRp2+VMJIF+S0V/
-          S4AsJ6YZkxH78RoexiYHFYMQAAAEEAtGPkFquU/Qy4POAf9HOb4Xe+dgMgENs+rZV3gzeD
-          7wnQP1M7sZwGKhde+BlhiuSgkUW6+2Am/ui7nvOwt+9begAAAEEA7r1VsA+y7tljxwHWYT
-          8lx5NIfFCfIaB3VpvlBltBxI0T56qMBxVIPoEgCcFL3CVtRLZ/KukgJKiXEk/EREgNFwAA
-          AEEAxqjQUreggg6tzLrrDOchATWDxZH/KBpOpalrWc9afbDAbiOWidR9lex+X+pXHa1kYM
-          ++vZcXPGeWRqLYHReseQAAAB9mZHVwb250QHNhbWFlbC5ob21lLmV2ZW5pdC5pbmZvAQI=
-          -----END RSA PRIVATE KEY-----
 ```

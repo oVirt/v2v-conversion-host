@@ -11,13 +11,4 @@
   when:
     - "v2v_host_type == 'openstack'"
 
-- include_tasks: "install-transport-ssh-user-key.yml"
-
-- include_tasks: "install-transport-ssh-vmware-host-key-from-variable.yml"
-  when:
-    - "vmware_hosts is defined"
-    - "vmware_host.name is defined"
-    - "vmware_host.conversion_ssh_private_key is defined"
-  loop: "{{ vmware_hosts }}"
-  loop_control:
-    loop_var: vmware_host
+- include_tasks: "install-transport-ssh-private-key.yml"
