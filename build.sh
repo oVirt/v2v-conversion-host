@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RPM_VERSION="1.10.0"
+RPM_VERSION="1.11.0"
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
     RPM_RELEASE="1"
 else
@@ -12,21 +12,19 @@ else
 fi
 
 ROLE_NAME="oVirt.v2v-conversion-host"
-PACKAGE_NAME="ovirt-ansible-v2v-conversion-host"
-PREFIX=/usr/local
-DATAROOT_DIR=${DATAROOT_DIR:-${PREFIX}/share}
-ROLES_DATAROOT_DIR=$DATAROOT_DIR/ansible/roles
-DOC_DIR=$DATAROOT_DIR/doc
-PKG_DATA_DIR=${PKG_DATA_DIR:-$ROLES_DATAROOT_DIR/$PACKAGE_NAME}
-PKG_DATA_DIR_ORIG=${PKG_DATA_DIR_ORIG:-$PKG_DATA_DIR}
-PKG_DOC_DIR=${PKG_DOC_DIR:-$DOC_DIR/$PACKAGE_NAME}
-AUX_DATA_DIR=${AUX_DATA_DIR:-${DATAROOT_DIR}/${PACKAGE_NAME}}
+PACKAGE_NAME="v2v-conversion-host"
+ROLE_RPM_NAME="${PACKAGE_NAME}-ansible"
 
-DISPLAY_VERSION=$PACKAGE$RPM_VERSION
+PREFIX="${PREFIX:-/usr/local}"
+DATA_DIR="${DATA_DIR:-${PREFIX}/share}"
+BIN_DIR="${BIN_DIR:-${PREFIX}/bin}"
+
+ROLES_DIR="$DATA_DIR/ansible/roles"
+AUX_DATA_DIR="$DATA_DIR/$ROLE_RPM_NAME"
 
 TARBALL="$PACKAGE_NAME-$RPM_VERSION.tar.gz"
 
-dist() {
+do_dist() {
   echo "Creating tar archive '$TARBALL' ... "
   sed \
    -e "s|@RPM_VERSION@|$RPM_VERSION|g" \
@@ -38,21 +36,19 @@ dist() {
   echo "tar archive '$TARBALL' created."
 }
 
-install() {
+do_install() {
   echo "Installing data..."
-  mkdir -p $PKG_DATA_DIR
-  mkdir -p $PKG_DOC_DIR
 
-  cp -pR defaults/ $PKG_DATA_DIR
-  cp -pR files/ $PKG_DATA_DIR
-  cp -pR meta/ $PKG_DATA_DIR
-  cp -pR tasks/ $PKG_DATA_DIR
+  mkdir -p $ROLES_DIR
+  cp -pR "ansible/$ROLE_NAME" "$ROLES_DIR"
 
-  mkdir -p "$AUX_DATA_DIR"
+  mkdir -p $BIN_DIR
+  install --mode=0755 -T wrapper/virt-v2v-wrapper.py $BIN_DIR/virt-v2v-wrapper
+
   mkdir -p "$AUX_DATA_DIR/playbooks"
-  cp -pR examples/*.yml "$AUX_DATA_DIR/playbooks"
+  install -t "$AUX_DATA_DIR/playbooks" ansible/examples/*.yml
 
   echo "Installation done."
 }
 
-$1
+do_$1

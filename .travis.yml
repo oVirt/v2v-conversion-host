@@ -24,5 +24,6 @@ script:
   # Run sytax checks and linters
   - tox
 
-notifications:
-  webhooks: https://galaxy.ansible.com/api/v1/notifications/
+# Galaxy cannot handle the fact that role is in subdirectory
+# notifications:
+#   webhooks: https://galaxy.ansible.com/api/v1/notifications/
