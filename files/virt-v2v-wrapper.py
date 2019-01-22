@@ -816,10 +816,10 @@ class OutputParser(object):
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
     OSP_VOLUME_PROPS = re.compile(
-        br'openstack .*\'volume\' \'set\'.*'
-        br'\'--property\''
-        br' \'virt_v2v_disk_index=(?P<volume>[0-9]+)/[0-9]+\'.*'
-        br'\'(?P<uuid>[a-fA-F0-9-]*)\'')
+        br'openstack .*\'?volume\'? \'?set.*'
+        br'\'?--property\'?'
+        br' \'?virt_v2v_disk_index=(?P<volume>[0-9]+)/[0-9]+.*'
+        br' \'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
 
     def __init__(self, v2v_log):
         self._log = open(v2v_log, 'rbU')
