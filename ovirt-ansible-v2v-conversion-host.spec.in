@@ -41,6 +41,14 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Tue Jan 22 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.9.1-1
+- Wrapper changes:
+  * Fix regex matching OSP volume IDs (BZ#1668049)
+- Roles changes:
+  * Fix path to wrapper in uninstallation task
+  * Change again how we configure SSH keys for VMware; use only single key for
+    all hosts
+
 * Mon Jan  7 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.9.0-1
 - Wrapper changes:
   * Prevent passwords leaking in error reports from failed openstack commands
