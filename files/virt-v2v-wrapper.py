@@ -192,6 +192,10 @@ class OSPHost(BaseHost):
 
         For OpenStack this entails creating a VM instance.
         """
+        vm_name = data['vm_name']
+        if state['internal']['display_name'] is not None:
+            vm_name = state['internal']['display_name']
+
         # Init keystone
         if self._run_openstack(['token', 'issue'], data) is None:
             logging.error('Create VM failed')
@@ -235,7 +239,7 @@ class OSPHost(BaseHost):
                 '--network', nic['destination'],
                 '--mac-address', nic['mac_address'],
                 '--enable',
-                '%s_port_%s' % (data['vm_name'], len(ports)),
+                '%s_port_%s' % (vm_name, len(ports)),
                 ]
             if 'ip_address' in nic:
                 port_cmd.extend([
@@ -266,7 +270,7 @@ class OSPHost(BaseHost):
                 ])
         for port in ports:
             os_command.extend(['--nic', 'port-id=%s' % port])
-        os_command.append(data['vm_name'])
+        os_command.append(vm_name)
         # Let's get rolling...
         if self._run_openstack(os_command, data, destination=True) is None:
             logging.error('Create VM failed')
@@ -820,6 +824,7 @@ class OutputParser(object):
         br'\'?--property\'?'
         br' \'?virt_v2v_disk_index=(?P<volume>[0-9]+)/[0-9]+.*'
         br' \'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
+    SSH_VMX_GUEST_NAME = re.compile(br'^displayName = "(.*)"$')
 
     def __init__(self, v2v_log):
         self._log = open(v2v_log, 'rbU')
@@ -858,6 +863,13 @@ class OutputParser(object):
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
+
+        # SSH (all outputs)
+        m = self.SSH_VMX_GUEST_NAME.match(line)
+        if m is not None:
+            state['internal']['display_name'] = m.group(1)
+            logging.info('Set VM display name to: %s',
+                         state['internal']['display_name'])
 
         # SSH + RHV
         m = self.OVERLAY_SOURCE_RE.match(line)
@@ -1302,6 +1314,7 @@ def main():
                 'disks': [],
                 'internal': {
                     'disk_ids': {},
+                    'display_name': None,
                     'ports': [],
                     'state_file': state_file,
                     },
