@@ -581,7 +581,6 @@ class VDSMHost(BaseHost):
         """ Tell under which group to run virt-v2v """
         return VDSMHost.VDSM_GID
 
-
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
         # Determine whether direct backend is required
