@@ -4,4 +4,9 @@ extends: default
 rules:
   line-length: disable
 
-ignore: .tox
+ignore: |
+  .tox/
+  **/context/.travis.yml
+  **/govmomi/.travis.yml
+  **/govmomi/.goreleaser.yml
+  **/mux/.travis.yml
