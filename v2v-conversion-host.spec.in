@@ -2,6 +2,11 @@
 %global roleprefix oVirt.
 %global ansible_roles_dir ansible/roles
 
+%if ! 0%{?gobuild:1}
+%define gobuild(o:) go build -buildmode=pie -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n')" -tags "$BUILDTAGS" -a -v -x %{?**};
+%endif
+
+
 Name: @PACKAGE_NAME@
 Summary: Set of tools for configuring conversion hosts for ManageIQ
 Version: @RPM_VERSION@
@@ -9,7 +14,6 @@ Release: @RPM_RELEASE@%{?release_suffix}%{?dist}
 Source0: https://github.com/oVirt/ovirt-ansible-v2v-conversion-host/releases/download/v%{version}/%{name}-%{version}.tar.gz
 License: ASL 2.0
 Group:          Virtualization/Management
-BuildArch:      noarch
 Url:            http://www.ovirt.org
 
 %description
@@ -20,14 +24,23 @@ Project contsists of:
 - daemonizing wrapper for virt-v2v
 
 %package ansible
-Summary:  Ansible role to setup oVirt host as conversion host for ManageIQ
+Summary: Ansible role to setup oVirt host as conversion host for ManageIQ
 Requires: ansible >= 2.4
+BuildArch: noarch
 
 %description ansible
-Ansible role to setup hosts as conversion host for ManageIQ.
+Ansible role to setup hosts as conversion host for ManageIQ
+
+%package provider
+Summary: Helper service for querying information from VMware
+BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
+
+%description provider
+Helper service for querying information from VMware
 
 %package wrapper
 Summary: Daemonizing wrapper for virt-v2v
+BuildArch: noarch
 
 %description wrapper
 Daemonizing wrapper for virt-v2v.
@@ -37,24 +50,39 @@ Daemonizing wrapper for virt-v2v.
 
 %build
 
+export GOPATH=$(pwd)/GOPATH
+d="GOPATH/src/github.com/ovirt"
+mkdir -p "$d"
+pushd "$d"
+    ln -s $(dirs +1 -l) %{name}
+popd
+
+pushd "$d"/%{name}/kubevirt-provider
+%gobuild -o kubevirt-provider .
+
+
 %install
 export DATA_DIR=%{buildroot}%{_datadir}
 export BIN_DIR=%{buildroot}%{_bindir}
 sh build.sh install
-
+install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
 
 %files ansible
 %{_datadir}/%{ansible_roles_dir}/
 %{_datadir}/%{name}-ansible/
-
 %doc README.md
 %doc docs/
 %doc ansible/examples/
 %license LICENSE
 
-%files wrapper
-%{_bindir}
+%files provider
+%{_bindir}/kubevirt-provider
+%doc README.md
+%doc docs/
+%license LICENSE
 
+%files wrapper
+%{_bindir}/virt-v2v-wrapper*
 %doc README.md
 %doc docs/
 %license LICENSE

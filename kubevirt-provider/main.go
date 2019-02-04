@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/pkliczewski/provider-pod/client"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-provider/client"
 	"golang.org/x/crypto/ssh"
 )
 
