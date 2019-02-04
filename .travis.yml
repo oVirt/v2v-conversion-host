@@ -3,6 +3,8 @@ sudo: required
 language: python
 python:
   - "3.6"
+services:
+  - docker
 
 env:
   global:
@@ -14,6 +16,10 @@ addons:
     packages:
       - python-pip
 
+
+before_install:
+  - docker pull centos:7
+
 install:
   - pip install tox ansible yamllint
 
@@ -23,6 +29,10 @@ install:
 script:
   # Run sytax checks and linters
   - tox
+  - cd kubevirt-provider/ && docker build -t v2v-conversion-host .
+  - docker run --detach --publish 8080:8080 v2v-conversion-host
+  - curl -v http://localhost:8080/healthcheck
+  - docker kill $(docker ps --quiet --latest)
 
 # Galaxy cannot handle the fact that role is in subdirectory
 # notifications:
