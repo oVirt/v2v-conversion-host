@@ -1059,6 +1059,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     unit = [
         'systemd-run',
+        '--description=virt-v2v conversion of: %s' % data['vm_name'],
         '--uid=%s' % host.get_uid(data),
         '--gid=%s' % host.get_gid(data),
         '/bin/sh', '-c', '"%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log)
