@@ -9,7 +9,7 @@
   register: manageiq_conversion_hosts_json
 
 - block:
-    - name: Isolate the relevant conversion hos
+    - name: Isolate the relevant conversion host
       set_fact:
         manageiq_existing_conversion_host: "{{ manageiq_conversion_hosts_json.json | json_query('resources[*]') | first }}"
 
