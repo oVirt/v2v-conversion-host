@@ -1,3 +1,5 @@
 yum-utils
 ansible
 git
+golang
+go-compilers-golang-compiler 
