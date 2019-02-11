@@ -31,6 +31,8 @@ Project contsists of:
 Summary: Ansible role to setup oVirt host as conversion host for ManageIQ
 Requires: ansible >= 2.4
 BuildArch: noarch
+Provides: ovirt-ansible-v2v-conversion-host = %{version}-%{release}
+Obsoletes: ovirt-ansible-v2v-conversion-host < 1.11.0-1
 
 %description ansible
 Ansible role to setup hosts as conversion host for ManageIQ
@@ -79,9 +81,17 @@ export BIN_DIR=%{buildroot}%{_bindir}
 sh build.sh install
 install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
 
+# Create symlinks for backward compatibility with
+# ovirt-ansible-v2v-conversion-host. Remove this later.
+mkdir -p %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks
+ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_check.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
+ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_disable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
+ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_enable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
+
 %files ansible
 %{_datadir}/%{ansible_roles_dir}/
 %{_datadir}/%{name}-ansible/
+%{_datadir}/ovirt-ansible-v2v-conversion-host
 %doc README.md
 %doc docs/
 %doc ansible/examples/
