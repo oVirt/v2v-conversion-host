@@ -1,3 +1,4 @@
+---
 apiVersion: kubevirt.io/v1alpha1
 kind: V2VVmware
 metadata:
@@ -6,13 +7,12 @@ spec:
   connection: v2v-vmware-token-52ncn
   listVmsRequest: true
   vms:
-  - detail: {}
-    name: fake_vm_1
-  - detail: {}
-    name: fake_vm_2
-    detailRequest: true
-  - detail: {}
-    name: fake_vm_3
+    - detail: {}
+      name: fake_vm_1
+    - detail: {}
+      name: fake_vm_2
+      detailRequest: true
+    - detail: {}
+      name: fake_vm_3
 status:
   phase: ConnectionVerified
-
