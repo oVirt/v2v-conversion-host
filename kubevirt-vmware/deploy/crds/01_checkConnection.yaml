@@ -1,0 +1,7 @@
+apiVersion: kubevirt.io/v1alpha1
+kind: V2VVmware
+metadata:
+  name: example-v2vvmware
+spec:
+  connection: v2v-vmware-token-52ncn
+
