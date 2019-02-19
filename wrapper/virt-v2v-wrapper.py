@@ -19,6 +19,7 @@
 
 from contextlib import contextmanager
 import copy
+import errno
 import json
 import logging
 import os
@@ -769,8 +770,12 @@ class State(object):  # {{{
                     'disk_ids': {},
                     'display_name': None,
                     'ports': [],
+                    'throttling_file': None,
                     },
                 'failed': False,
+                'throttling': {
+                    'cpu': None,
+                    }
                 }
             self._filename = None
 
@@ -1213,6 +1218,19 @@ class SystemdRunner(BaseRunner):  # {{{
                 property_name, output)
             return None
 
+    def systemd_set_property(self, property_name, value):
+        """ Set configuration property on systemd unit """
+        try:
+            subprocess.check_call([
+                'systemctl', 'set-property',
+                self._service_name, '%s=%s' % (property_name, value)])
+            return True
+        except subprocess.CalledProcessError:
+            logging.exception(
+                'Failed to get systemd property "%s"',
+                property_name)
+            return False
+
     def _systemd_return_code(self):
         """ Return code after the unit exited """
         code = self._systemd_property('ExecMainStatus')
@@ -1286,6 +1304,58 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     return (v2v_args, v2v_env)
 
 
+def throttling_update(runner, initial=None):
+    """ Update throttling """
+    state = State().instance
+    if initial is not None:
+        throttling = initial
+    else:
+        # Read from throttling file
+        try:
+            with open(state['internal']['throttling_file']) as f:
+                throttling = json.load(f)
+            # Remove file when finished to prevent spamming logs with repeated
+            # messages
+            os.remove(state['internal']['throttling_file'])
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                error('Failed to read throttling file', exception=True)
+            return
+        except ValueError:
+            error('Failed to read throttling file', exception=True)
+            return
+
+    # Throttling works only when we have (temporary) systemd unit. We do the
+    # check here and not at the beginning because we want the throttling file
+    # to be removed. We don't want to spam logs with repeated messages.
+    if not isinstance(runner, SystemdRunner):
+        logging.warn(
+            'Not applying throttling because virt-v2v is not in systemd unit')
+        return
+
+    processed = {}
+    for k, v in six.iteritems(throttling):
+        if k == 'cpu':
+            m = re.match("([+0-9]+)%?$", v)
+            if m is not None:
+                v = r'%s%%' % m.group(1)
+                if v != state['throttling']['cpu'] and \
+                        runner.systemd_set_property('CPUQuota', v):
+                    processed[k] = v
+                else:
+                    error(
+                        'Failed to set CPU quota',
+                        'Failed to set CPU quota to %s', v)
+            else:
+                error(
+                    'Failed to parse value for CPU quota',
+                    'Failed to parse value for CPU quota: %s', v)
+        else:
+            logging.debug('Ignoring unknown throttling request: %s', k)
+    state['throttling'].update(processed)
+    logging.info('New throttling setup: %r', state['throttling'])
+
+
 def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
@@ -1304,6 +1374,8 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
         state.write()
         return
     state['pid'] = runner.pid
+    if 'throttling' in data:
+        throttling_update(runner, data['throttling'])
 
     try:
         state['started'] = True
@@ -1312,6 +1384,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
             while runner.is_running():
                 state = parser.parse(state)
                 state.write()
+                throttling_update(runner)
                 time.sleep(5)
             logging.info(
                 'virt-v2v terminated with return code %d',
@@ -1491,6 +1564,9 @@ def main():
     state = State().instance
     state.set_filename(
         os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag))
+    throttling_file = os.path.join(STATE_DIR,
+                                   'v2v-import-%s.throttle' % log_tag)
+    state['internal']['throttling_file'] = throttling_file
 
     log_format = '%(asctime)s:%(levelname)s:' \
         + ' %(message)s (%(module)s:%(lineno)d)'
@@ -1503,6 +1579,7 @@ def main():
 
     logging.info('Will store virt-v2v log in: %s', v2v_log)
     logging.info('Will store state file in: %s', state.get_filename())
+    logging.info('Will read throttling limits from: %s', throttling_file)
 
     password_files = []
 
@@ -1600,6 +1677,7 @@ def main():
                 'v2v_log': v2v_log,
                 'wrapper_log': wrapper_log,
                 'state_file': state.get_filename(),
+                'throttling_file': throttling_file,
             }))
 
             # Let's get to work

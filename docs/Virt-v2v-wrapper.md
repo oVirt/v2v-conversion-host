@@ -16,9 +16,10 @@ The expected usage is as follows:
     to a non-root account
 
 3)  *daemonization*: wrapper writes to stdout simple JSON containing paths to
-    wrapper log file (`wrapper_log`), virt-v2v log file (`v2v_log`) and to the
-    state file (`state_file`) that can be used to monitor the progress; after
-    that it forks to the background
+    wrapper log file (`wrapper_log`), virt-v2v log file (`v2v_log`),
+    state file (`state_file`) that can be used to monitor the progress and
+    throttling file (`throttling_file`) that can be used to apply resource
+    limiting; after that it forks to the background
 
 4)  *conversion*: finally, virt-v2v process is executed; wrapper monitors its
     output and updates the state file on a regular basis
@@ -85,6 +86,8 @@ Miscellaneous:
 
 * `allocation`: optional key specifying the allocation type to use; possible
   values are `preallocated` and `sparse`.
+
+* `throttling`: optional key with initial throttling option (see below)
 
 Example:
 
@@ -214,3 +217,38 @@ Right before the wrapper terminates it updates the state with:
 * `failed`: with value `true` if the conversion process failed. If everything
   went OK, this key is not present. Existence of this key is the main way how
   to check whether the conversion succeeded or not.
+
+
+## Conversion throttling (rate limiting)
+
+It is possible to throttle resources used by the conversion. At the moment one
+can limit only CPU.
+
+Example of throttling file content:
+
+```
+{
+    "cpu": "50%",
+}
+```
+
+This will assign half of single CPU to the process.
+
+To remove a limit (reset to system default) one should assign value `None`.
+
+
+### CPU Usage
+
+Usage is expressed in percents of single CPU time.
+
+From systemd.resource-control(5):
+
+    Assign the specified CPU time quota to the processes executed. Takes a
+    percentage value, suffixed with "%". The percentage specifies how much CPU
+    time the unit shall get at maximum, relative to the total CPU time
+    available on one CPU. Use values > 100% for allotting CPU time on more than
+    one CPU. This controls the "cpu.max" attribute on the unified control group
+    hierarchy and "cpu.cfs_quota_us" on legacy.
+
+For example, to assign half of one CPU use "50%" or to assign two CPUs use
+"200%".
