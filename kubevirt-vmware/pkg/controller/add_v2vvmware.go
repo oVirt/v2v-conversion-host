@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"kubevirt.io/v2v-vmware/pkg/controller/v2vvmware"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/controller/v2vvmware"
 )
 
 func init() {

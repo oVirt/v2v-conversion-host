@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
-	"kubevirt.io/v2v-vmware/pkg/apis"
-	"kubevirt.io/v2v-vmware/pkg/controller"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
