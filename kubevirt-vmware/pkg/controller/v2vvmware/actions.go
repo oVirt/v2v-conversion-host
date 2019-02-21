@@ -4,15 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
+
 	kubevirtv1alpha1 "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1"
-	"time"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/controller/utils"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-const MaxRetryCount = 5
 
 func getConnectionSecret(r *ReconcileV2VVmware, request reconcile.Request, instance *kubevirtv1alpha1.V2VVmware) (*corev1.Secret, error) {
 	if instance.Spec.Connection == "" {
@@ -22,12 +22,6 @@ func getConnectionSecret(r *ReconcileV2VVmware, request reconcile.Request, insta
 	secret := &corev1.Secret{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.Connection, Namespace: request.Namespace}, secret)
 	return secret, err
-}
-
-func sleepBeforeRetry() {
-	log.Info("Falling asleep before retry ...")
-	time.Sleep(5 * time.Second)
-	log.Info("Awake after sleep, going to retry")
 }
 
 func getLoginCredentials(connectionSecret *corev1.Secret) (*LoginCredentials) {
@@ -62,7 +56,7 @@ func readVmsList(r *ReconcileV2VVmware, request reconcile.Request, connectionSec
 		return err
 	}
 
-	err = updateVmsList(r, request, vmwareVms, MaxRetryCount)
+	err = updateVmsList(r, request, vmwareVms, utils.MaxRetryCount)
 	if err != nil {
 		updateStatusPhase(r, request, PhaseLoadingVmsListFailed)
 		return err
@@ -78,7 +72,7 @@ func updateVmsList(r *ReconcileV2VVmware, request reconcile.Request, vmwareVms [
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to get V2VVmware object to update list of VMs, intended to write: '%s'", vmwareVms))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			return updateVmsList(r, request, vmwareVms, retryCount - 1)
 		}
 		return err
@@ -96,7 +90,7 @@ func updateVmsList(r *ReconcileV2VVmware, request reconcile.Request, vmwareVms [
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to update V2VVmware object with list of VMWare VMs, intended to write: '%s'", vmwareVms))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			return updateVmsList(r, request, vmwareVms, retryCount - 1)
 		}
 		return err
@@ -124,7 +118,7 @@ func readVmDetail(r *ReconcileV2VVmware, request reconcile.Request, connectionSe
 		return err
 	}
 
-	err = updateVmDetail(r, request, vmwareVmName, vmDetail, MaxRetryCount)
+	err = updateVmDetail(r, request, vmwareVmName, vmDetail, utils.MaxRetryCount)
 	if err != nil {
 		updateStatusPhase(r, request, PhaseLoadingVmDetailFailed)
 		return err
@@ -140,7 +134,7 @@ func updateVmDetail(r *ReconcileV2VVmware, request reconcile.Request, vmwareVmNa
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to get V2VVmware object to update detail of '%s' VM.", vmwareVmName))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			return updateVmDetail(r, request, vmwareVmName, vmDetail, retryCount - 1)
 		}
 		return err
@@ -157,7 +151,7 @@ func updateVmDetail(r *ReconcileV2VVmware, request reconcile.Request, vmwareVmNa
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to update V2VVmware object with detail of '%s' VM.", vmwareVmName))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			return updateVmDetail(r, request, vmwareVmName, vmDetail, retryCount - 1)
 		}
 		return err
@@ -168,7 +162,7 @@ func updateVmDetail(r *ReconcileV2VVmware, request reconcile.Request, vmwareVmNa
 
 func updateStatusPhase(r *ReconcileV2VVmware, request reconcile.Request, phase string) {
 	log.Info(fmt.Sprintf("updateStatusPhase(): %s", phase))
-	updateStatusPhaseRetry(r, request, phase, MaxRetryCount)
+	updateStatusPhaseRetry(r, request, phase, utils.MaxRetryCount)
 }
 
 func updateStatusPhaseRetry(r *ReconcileV2VVmware, request reconcile.Request, phase string, retryCount int) {
@@ -178,7 +172,7 @@ func updateStatusPhaseRetry(r *ReconcileV2VVmware, request reconcile.Request, ph
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to get V2VVmware object to update status info. Intended to write phase: '%s'", phase))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			updateStatusPhaseRetry(r, request, phase, retryCount - 1)
 		}
 		return
@@ -189,7 +183,7 @@ func updateStatusPhaseRetry(r *ReconcileV2VVmware, request reconcile.Request, ph
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to update V2VVmware status. Intended to write phase: '%s'", phase))
 		if retryCount > 0 {
-			sleepBeforeRetry()
+			utils.SleepBeforeRetry()
 			updateStatusPhaseRetry(r, request, phase, retryCount - 1)
 		}
 	}
