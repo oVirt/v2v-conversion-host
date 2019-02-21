@@ -24,10 +24,10 @@ import (
 
 const vCenterTemporaryLabel = "cnv.io/temporary"
 
-const DefaultTimeToLiveDuration = time.Second * 20 // TODO: increase
+const DefaultTimeToLiveDuration = time.Hour * 1
 
 var doneResult = reconcile.Result{} // no requeue
-var rescheduleResult = reconcile.Result{RequeueAfter: time.Second*5} // TODO: increase
+var rescheduleResult = reconcile.Result{RequeueAfter: time.Minute*5}
 
 var log = logf.Log.WithName("gc_v2vvmware")
 
