@@ -152,6 +152,14 @@ class OSPHost(BaseHost):
         """ Handle cleanup after failed conversion """
         volumes = state['internal']['disk_ids'].values()
         ports = state['internal']['ports']
+        # Remove attached volumes
+        for v in volumes:
+            rm_args = [
+                'server', 'remove', 'volume',
+                data['osp_server_id'],
+                v
+            ]
+            self._run_openstack(rm_args, data)
         # Cancel transfers
         transfers = self._run_openstack([
             'volume', 'transfer', 'request', 'list',
@@ -802,6 +810,9 @@ class OutputParser(object):
         br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
+    OSP_VOLUME_ID = re.compile(
+            br'openstack .*\'?volume\'? \'?show\'?.* '
+            br'\'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
     OSP_VOLUME_PROPS = re.compile(
         br'openstack .*\'?volume\'? \'?set.*'
         br'\'?--property\'?'
@@ -901,16 +912,23 @@ class OutputParser(object):
             state['internal']['disk_ids'][path] = disk_id
             logging.debug('Path \'%s\' has disk id=\'%s\'', path, disk_id)
 
-        # OpenStack volume index and UUID
+        # OpenStack volume UUID
+        m = self.OSP_VOLUME_ID.match(line)
+        if m is not None:
+            volume_id = m.group('uuid').decode('utf-8')
+            ids = state['internal']['disk_ids']
+            ids[len(ids)+1] = volume_id
+            logging.debug('Adding OSP volume %s', volume_id)
+
+        # OpenStack volume index
         m = self.OSP_VOLUME_PROPS.match(line)
         if m is not None:
             volume_id = m.group('uuid').decode('utf-8')
             index = int(m.group('volume'))
-            state['internal']['disk_ids'][index] = volume_id
-            logging.debug(
-                'Volume at index %d has id=\'%s\'',
-                index, volume_id)
-
+            # Just check
+            if state['internal']['disk_ids'].get(index) != volume_id:
+                logging.debug(
+                    'Volume \'%s\' is NOT at index %d', volume_id, index)
         return state
 
     def close(self):
