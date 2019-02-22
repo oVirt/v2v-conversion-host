@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1"
 )
 
 func init() {

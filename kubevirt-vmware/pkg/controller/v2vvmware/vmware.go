@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kubevirtv1alpha1 "kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1"
+	kubevirtv1alpha1 "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1"
 )
 
 /*

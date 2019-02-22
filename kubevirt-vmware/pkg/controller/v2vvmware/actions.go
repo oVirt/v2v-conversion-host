@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
-	kubevirtv1alpha1 "kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1"
+	kubevirtv1alpha1 "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"

@@ -13,9 +13,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmware":       schema_pkg_apis_kubevirt_v1alpha1_V2VVmware(ref),
-		"kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec":   schema_pkg_apis_kubevirt_v1alpha1_V2VVmwareSpec(ref),
-		"kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus": schema_pkg_apis_kubevirt_v1alpha1_V2VVmwareStatus(ref),
+		"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmware":       schema_pkg_apis_kubevirt_v1alpha1_V2VVmware(ref),
+		"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec":   schema_pkg_apis_kubevirt_v1alpha1_V2VVmwareSpec(ref),
+		"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus": schema_pkg_apis_kubevirt_v1alpha1_V2VVmwareStatus(ref),
 	}
 }
 
@@ -46,19 +46,19 @@ func schema_pkg_apis_kubevirt_v1alpha1_V2VVmware(ref common.ReferenceCallback) c
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec"),
+							Ref: ref("github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus"),
+							Ref: ref("github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec", "kubevirt.io/v2v-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareSpec", "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1.V2VVmwareStatus"},
 	}
 }
 
