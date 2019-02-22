@@ -3,6 +3,7 @@ package v2vvmware
 import (
 	"context"
 	"fmt"
+	"github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/controller/utils"
 
 	kubevirtv1alpha1 "github.com/ovirt/v2v-conversion-host/kubevirt-vmware/pkg/apis/kubevirt/v1alpha1"
 
@@ -100,23 +101,7 @@ func (r *ReconcileV2VVmware) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err // request will be re-queued
 	}
 	reqLogger.Info("Connection secret retrieved.")
-/* Commented out: based on actual UI flow, the status.phase can be set within readVmsList and load of VMs can be initiated immediately
-    if !instance.Spec.ListVmsRequest {
-		// true if list of VMWare VMs shall start to be retrieved
-		// Imperative hack to enable quick/independent check of credentials in the most simple way
 
-		if instance.Status.Phase == PhaseConnectionSuccessful {
-			reqLogger.Info("The checkConnectionOnly() already finished, nothing to do.")
-			return reconcile.Result{}, nil
-		}
-
-    	err = checkConnectionOnly(r, request, connectionSecret)
-    	if err != nil {
-			reqLogger.Error(err, "Failed to check VMWare connection.")
-		}
-		return reconcile.Result{}, err // request will be re-queued if failed
-	}
-*/
     // Considering recent high-level flow, the list of VMWare VMs is read at most once (means: do not refresh).
     // If refresh is ever needed, implement either here or re-create the V2VVmware object
 
@@ -124,7 +109,11 @@ func (r *ReconcileV2VVmware) Reconcile(request reconcile.Request) (reconcile.Res
 		err = readVmsList(r, request, connectionSecret)
 		if err != nil {
 			reqLogger.Error(err, "Failed to read list of VMWare VMs.")
+			// The Manager recently does not support delaying of requeued requests after a failure
+			// As a workaround, implement it here to avoid overloading of VMWare server
+			utils.SleepBeforeRetryN(15) // wait at least 15 seconds before retry
 		}
+
 		return reconcile.Result{}, err // request will be re-queued if failed
 	}
 
