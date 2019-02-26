@@ -1080,15 +1080,18 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
         '--description=virt-v2v conversion of: %s' % data['vm_name'],
         '--uid=%s' % host.get_uid(data),
         '--gid=%s' % host.get_gid(data),
-        '/bin/sh', '-c', '"%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log)
-        ] + v2v_args
+        ]
+    for k, v in six.iteritems(v2v_env):
+        unit.append('--setenv=%s=%s' % (k, v))
+    unit.extend(
+        ['/bin/sh', '-c', '"%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log)])
+    unit.extend(v2v_args)
 
     proc = subprocess.Popen(
             unit,
             stdin=DEVNULL,
             stderr=subprocess.STDOUT,
             stdout=subprocess.PIPE,
-            env=v2v_env,
             )
     run_output = proc.communicate()[0]
     logging.info('systemd-run returned: %s', run_output)
