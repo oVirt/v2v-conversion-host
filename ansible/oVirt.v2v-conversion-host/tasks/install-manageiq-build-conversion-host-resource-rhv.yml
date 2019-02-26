@@ -1,9 +1,12 @@
 ---
 - set_fact:
-    manageiq_conversion_host_resource_ems_ref: "{{ ansible_machine_id[:8] }}-{{ ansible_machine_id[8:12] }}-{{ ansible_machine_id[12:16] }}-{{ ansible_machine_id[16:20] }}-{{ ansible_machine_id[20:] }}"
+    manageiq_conversion_host_resource_ems_ref: "{{ ansible_machine_id[:8] }}-{{ ansible_machine_id[8:12] }}-\
+                                                {{ ansible_machine_id[12:16] }}-{{ ansible_machine_id[16:20] }}-\
+                                                {{ ansible_machine_id[20:] }}"
 
 - uri:
-    url: "{{ manageiq_url }}/api/hosts/?expand=resources&attributes=ext_management_system&filter[]=name={{ inventory_hostname }}&filter[]=ext_management_system.name={{ manageiq_provider_name | regex_replace(' ', '%20') }}"
+    url: "{{ manageiq_url }}/api/hosts/?expand=resources&attributes=ext_management_system&\
+          filter[]=name={{ inventory_hostname }}&filter[]=ext_management_system.name={{ manageiq_provider_name | regex_replace(' ', '%20') }}"
     user: "{{ manageiq_username }}"
     password: "{{ manageiq_password }}"
     method: GET

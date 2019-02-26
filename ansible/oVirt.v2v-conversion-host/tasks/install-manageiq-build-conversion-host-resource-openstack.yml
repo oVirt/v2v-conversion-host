@@ -1,6 +1,8 @@
 ---
 - set_fact:
-    manageiq_conversion_host_resource_ems_ref: "{{ ansible_machine_id[:8] }}-{{ ansible_machine_id[8:12] }}-{{ ansible_machine_id[12:16] }}-{{ ansible_machine_id[16:20] }}-{{ ansible_machine_id[20:] }}"
+    manageiq_conversion_host_resource_ems_ref: "{{ ansible_machine_id[:8] }}-{{ ansible_machine_id[8:12] }}-\
+                                                {{ ansible_machine_id[12:16] }}-{{ ansible_machine_id[16:20] }}-\
+                                                {{ ansible_machine_id[20:] }}"
 
 - uri:
     url: "{{ manageiq_url }}/api/vms/?filter[]=ems_ref={{ manageiq_conversion_host_resource_ems_ref }}&expand=resources"

@@ -26,7 +26,9 @@
 
 - name: Print the check result
   debug:
-    msg: "VDDK installed: {{ v2v_vddk_library_installed }}. nbdkit plugin installed: {{ v2v_nbdkit_plugin_installed }}. nbdkit plugin working: {{ v2v_nbdkit_plugin_working }}."
+    msg: "VDDK installed: {{ v2v_vddk_library_installed }}. \
+         nbdkit plugin installed: {{ v2v_nbdkit_plugin_installed }}. \
+         nbdkit plugin working: {{ v2v_nbdkit_plugin_working }}."
 
 - name: Fail if we are running a check from CloudForms
   assert:
