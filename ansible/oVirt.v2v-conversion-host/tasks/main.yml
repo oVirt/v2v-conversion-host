@@ -1,6 +1,7 @@
 ---
 # Check that the operating system is Red Hat Enterprise Linux or CentOS in version 7 and 64 bits.
-- assert:
+- name: Check OS
+  assert:
     msg: "This role can only be applied to Red Hat Enterprise Linux / CentOS 7 - 64 bits."
     that:
       - (ansible_distribution == "CentOS" and ansible_distribution_major_version >= "7") or
@@ -8,7 +9,8 @@
       - ansible_machine == 'x86_64'
 
 # Check that the required variables are set
-- assert:
+- name: Check variable role_action
+  assert:
     msg: "Variable 'role_action' is mandatory. Aborting."
     that: role_action is defined
 

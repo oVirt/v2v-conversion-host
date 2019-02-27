@@ -8,7 +8,8 @@
     validate_certs: "{{ manageiq_validate_certs | default(true) }}"
   register: manageiq_conversion_hosts_json
 
-- set_fact:
+- name: Set fact manageiq_conversion_host
+  set_fact:
     manageiq_conversion_host: "{{ manageiq_conversion_hosts_json.json | json_query('resources[*]') | first }}"
 
 - block:
@@ -21,7 +22,8 @@
         status_code: 204
         validate_certs: "{{ manageiq_validate_certs | default(true) }}"
 
-    - set_fact:
+    - name: Set fact manageiq_conversion_host_resource_type
+      set_fact:
         manageiq_conversion_host_resource_type: "{{ manageiq_conversion_host.resource.type.split('::') | last | lower }}"
 
     - name: Untag conversion host resource

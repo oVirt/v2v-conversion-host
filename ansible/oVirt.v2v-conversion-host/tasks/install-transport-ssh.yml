@@ -1,11 +1,13 @@
 ---
-- set_fact:
+- name: Set facts ssh_config_path, ssh_config_owner
+  set_fact:
     ssh_config_path: "/var/lib/vdsm/.ssh"
     ssh_config_owner: "vdsm"
   when:
     - "v2v_host_type == 'rhv'"
 
-- set_fact:
+- name: Set facts ssh_config_path, ssh_config_owner
+  set_fact:
     ssh_config_path: "/root/.ssh"
     ssh_config_owner: "root"
   when:

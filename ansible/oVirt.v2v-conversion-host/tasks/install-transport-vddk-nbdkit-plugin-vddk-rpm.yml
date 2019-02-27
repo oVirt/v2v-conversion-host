@@ -1,5 +1,6 @@
 ---
-- assert:
+- name: Check var v2v_build_dir
+  assert:
     that: "v2v_build_dir is defined"
     msg: "Variable 'v2v_build_dir' is mandatory to build VDDK plugin for nbdkit."
 
@@ -53,7 +54,8 @@
     use_regex: "no"
   register: vddk_spec
 
-- assert:
+- name: Check that one spec file exists
+  assert:
     msg: Expected one spec file named nbdkit-plugin-vddk.spec
     that:
       - "vddk_spec.matched == 1"
@@ -94,7 +96,8 @@
     use_regex: "no"
   register: plugin_rpm
 
-- assert:
+- name: Check that one RPM exists
+  assert:
     msg: More than one RPM were built, expected just one
     that:
       - "plugin_rpm.matched == 1"
