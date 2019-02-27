@@ -1083,8 +1083,10 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
         ]
     for k, v in six.iteritems(v2v_env):
         unit.append('--setenv=%s=%s' % (k, v))
-    unit.extend(
-        ['/bin/sh', '-c', '"%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log)])
+    unit.extend([
+        '/bin/sh', '-c',
+        'exec "%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log),
+        VIRT_V2V])  # First argument is command name
     unit.extend(v2v_args)
 
     proc = subprocess.Popen(
