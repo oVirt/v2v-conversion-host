@@ -18,7 +18,8 @@
 
 - include_tasks: "install-provider-{{ v2v_host_type }}.yml"
 
-- set_fact:
+- name: Set fact manageiq-provider
+  set_fact:
     manageiq_provider: "{{ item }}"
   when:
     - "item.name == manageiq_provider_name"

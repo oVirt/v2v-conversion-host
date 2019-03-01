@@ -1,5 +1,6 @@
 ---
-- set_fact:
+- name: Set fact manageiq_conversion_host_resource_ems_ref
+  set_fact:
     manageiq_conversion_host_resource_ems_ref: "{{ ansible_machine_id[:8] }}-{{ ansible_machine_id[8:12] }}-\
                                                 {{ ansible_machine_id[12:16] }}-{{ ansible_machine_id[16:20] }}-\
                                                 {{ ansible_machine_id[20:] }}"
@@ -14,10 +15,12 @@
   register: manageiq_get_conversion_host_resources_json
 
 - block:
-    - set_fact:
+    - name: Set fact manageiq_get_conversion_host_resource
+      set_fact:
         manageiq_get_conversion_host_resource: "{{ manageiq_get_conversion_host_resources_json.json | json_query('resources[*]') | first }}"
 
-    - set_fact:
+    - name: Set fact manageiq_post_conversion_host_resource
+      set_fact:
         manageiq_post_conversion_host_resource:
           name: "{{ inventory_hostname }}"
           resource_id: "{{ manageiq_get_conversion_host_resource.id }}"
@@ -26,7 +29,8 @@
           ssh_transport_supported: "{{ 'ssh' in v2v_transport_methods }}"
           max_concurrent_tasks: "{{ v2v_max_concurrent_conversions | default(omit) }}"
 
-    - set_fact:
+    - name: Set fact manageis_post_conversion_host_resource_href
+      set_fact:
         manageiq_post_conversion_host_resource_href: "{{ manageiq_get_conversion_host_resource.href }}"
 
   when:

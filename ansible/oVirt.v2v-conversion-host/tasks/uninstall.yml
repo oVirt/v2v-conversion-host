@@ -1,7 +1,8 @@
 ---
 # ----------------------- Provider Configuration ----------------------------
 
-- set_fact:
+- name: Set fact manageiq_provider
+  set_fact:
     manageiq_provider: "{{ item }}"
   when:
     - "item.name == manageiq_provider_name"

@@ -6,7 +6,8 @@
   register: stat_ssh_key
 
 - block:
-    - fail:
+    - name: Check var v2v_ssh_private_key
+      fail:
         msg: "No file named '{{ ssh_config_path }}/id_rsa' found and no 'v2v_ssh_private_key' variable set"
       when:
         - "v2v_ssh_private_key is not defined"

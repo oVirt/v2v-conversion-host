@@ -1,5 +1,6 @@
 ---
-- assert:
+- name: Check that some vars are defined
+  assert:
     that: "{{ item }} is defined"
     msg: "Variable '{{ item }}' is mandatory to {{ role_action }} VDDK pluging."
   with_items:
