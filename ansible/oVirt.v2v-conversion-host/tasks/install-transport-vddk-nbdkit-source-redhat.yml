@@ -12,6 +12,7 @@
     use_regex: "no"
   register: nbdkit_srpm
 
+# Ignore ansible-lint rule 303 "rpm used in place of yum or rpm_key module
 - name: Extract nbdkit SRPM
   command: >
     rpm --install
@@ -20,4 +21,4 @@
     --define "_specdir {{ v2v_build_dir|quote }}"
     "{{ nbdkit_srpm.files[0].path }}"
   args:
-    chdir: "{{ v2v_build_dir }}"
+    chdir: "{{ v2v_build_dir }}"  # noqa 303
