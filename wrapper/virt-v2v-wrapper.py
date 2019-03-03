@@ -392,7 +392,7 @@ class OSPHost(BaseHost):
             # NOTE: Do NOT use logging.exception() here as it leaks passwords
             # into the log!
             logging.error(
-                'Command exitet with non-zero return code %d, output:\n%s\n',
+                'Command exited with non-zero return code %d, output:\n%s\n',
                 e.returncode, e.output)
             return None
 
