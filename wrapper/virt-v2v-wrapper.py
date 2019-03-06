@@ -797,7 +797,7 @@ def daemonize():
     pycurl.global_init(pycurl.GLOBAL_ALL)
 
 
-class OutputParser(object):
+class OutputParser(object):  # {{{
 
     COPY_DISK_RE = re.compile(br'.*Copying disk (\d+)/(\d+) to.*')
     DISK_PROGRESS_RE = re.compile(br'\s+\((\d+\.\d+)/100%\)')
@@ -966,6 +966,138 @@ class OutputParser(object):
             })
 
 
+# }}}
+class BaseRunner(object):  # {{{
+
+    def __init__(self, host, arguments, environment, log):
+        self._arguments = arguments
+        self._environment = environment
+        self._host = host
+        self._log = log
+        self._pid = None
+        self._return_code = None
+
+    def is_running(self):
+        """ Returns True if process is still running """
+        raise NotImplementedError()
+
+    def kill(self):
+        """ Stop the process """
+        raise NotImplementedError()
+
+    @property
+    def pid(self):
+        """ Get PID of the process """
+        return self._pid
+
+    @property
+    def return_code(self):
+        """ Get return code of the process or None if it is still running """
+        return self._return_code
+
+    def run(self):
+        """ Start the process """
+        raise NotImplementedError()
+
+
+# }}}
+class SystemdRunner(BaseRunner):  # {{{
+    def is_running(self):
+        try:
+            subprocess.check_call([
+                'systemctl', 'is-active', '--quiet', self._service_name])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    @property
+    def return_code(self):
+        if self._return_code is None:
+            if not self.is_running():
+                self._return_code = self._systemd_return_code()
+        return self._return_code
+
+    def kill(self):
+        try:
+            subprocess.check_call(['systemctl', 'kill', self._service_name])
+        except subprocess.CalledProcessError:
+            logging.exception('Failed to kill virt-v2v unit')
+
+    def run(self):
+        unit = [
+            'systemd-run',
+            '--description=virt-v2v conversion',
+            '--uid=%s' % self._host.get_uid(),
+            '--gid=%s' % self._host.get_gid(),
+            ]
+        for k, v in six.iteritems(self._environment):
+            unit.append('--setenv=%s=%s' % (k, v))
+        unit.extend([
+            '/bin/sh', '-c',
+            'exec "%s" "$@" > "%s" 2>&1' % (VIRT_V2V, self._log),
+            VIRT_V2V])  # First argument is command name
+        unit.extend(self._arguments)
+
+        proc = subprocess.Popen(
+                unit,
+                stdin=DEVNULL,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                )
+        run_output = proc.communicate()[0]
+        logging.info('systemd-run returned: %s', run_output)
+        m = re.search(br'\b(run-[0-9]+\.service)\.', run_output)
+        if m is None:
+            raise RuntimeError(
+                'Failed to find service name in output',
+                run_output)
+        self._service_name = m.group(1)
+        logging.info('Waiting for PID...')
+        for i in xrange(5):
+            pid = self._systemd_property('ExecMainPID')
+            if pid is not None and pid != '':
+                break
+            time.sleep(5)
+        if pid is None or pid == '':
+            raise RuntimeError('Failed to get PID for virt-v2v process')
+            logging.info('Running with PID: %s', pid)
+        self._pid = pid
+
+    def _systemd_property(self, property_name):
+        try:
+            output = subprocess.check_output([
+                'systemctl', 'show',
+                '--property=%s' % property_name,
+                self._service_name])
+        except subprocess.CalledProcessError:
+            logging.exception(
+                'Failed to get "%s" for virt-v2v service from systemd',
+                property_name)
+            return None
+        m = re.match(br'^%s=(.*)$' % property_name, output)
+        if m is not None:
+            return m.group(1)
+        else:
+            logging.error(
+                'Failed to get systemd property "%s". '
+                'Unexpected output: %r',
+                property_name, output)
+            return None
+
+    def _systemd_return_code(self):
+        """ Return code after the unit exited """
+        code = self._systemd_property('ExecMainStatus')
+        if code is None:
+            logging.error('Failed to get virt-v2v return code')
+            return -1
+        try:
+            return int(code)
+        except ValueError:
+            logging.exception('Failed to parse return code')
+            return -1
+
+
+# }}}
 @contextmanager
 def log_parser(v2v_log):
     parser = None
@@ -1033,99 +1165,44 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     return (v2v_args, v2v_env)
 
 
-def systemd_is_running(unit):
-    """ Check if systemd unit is running """
-    try:
-        subprocess.check_call(['systemctl', 'is-active', '--quiet', unit])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-def systemd_return_code(unit):
-    """ Return code after the unit exited """
-    try:
-        output = subprocess.check_output([
-            'systemctl', 'show',
-            '--property=ExecMainStatus',
-            unit])
-    except subprocess.CalledProcessError:
-        logging.exception('Failed to get virt-v2v return code from systemd')
-        return -1
-    m = re.match(br'^ExecMainStatus=([0-9]+)$', output)
-    if m is None:
-        logging.error('Failed to parse return code from: %s', output)
-        return -1
-    return int(m.group(1))
-
-
-def systemd_kill(unit):
-    """ Kill unit """
-    try:
-        subprocess.check_call(['systemctl', 'kill', unit])
-    except subprocess.CalledProcessError:
-        logging.exception('Failed to kill virt-v2v unit')
-
-
 def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
 
     v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
     v2v_args, v2v_env = host.prepare_command(
         data, v2v_args, v2v_env, v2v_caps)
 
-    proc = None
     logging.info('Starting virt-v2v:')
     log_command_safe(v2v_args, v2v_env)
 
-    unit = [
-        'systemd-run',
-        '--description=virt-v2v conversion of: %s' % data['vm_name'],
-        '--uid=%s' % host.get_uid(data),
-        '--gid=%s' % host.get_gid(data),
-        ]
-    for k, v in six.iteritems(v2v_env):
-        unit.append('--setenv=%s=%s' % (k, v))
-    unit.extend([
-        '/bin/sh', '-c',
-        'exec "%s" "$@" > "%s" 2>&1' % (VIRT_V2V, v2v_log),
-        VIRT_V2V])  # First argument is command name
-    unit.extend(v2v_args)
-
-    proc = subprocess.Popen(
-            unit,
-            stdin=DEVNULL,
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
-            )
-    run_output = proc.communicate()[0]
-    logging.info('systemd-run returned: %s', run_output)
-    m = re.search(br'\b(run-[0-9]+\.service)\.', run_output)
-    if m is None:
-        logging.error('Failed to find service name in output. Aborting...')
+    runner = SystemdRunner(host, v2v_args, v2v_env, v2v_log)
+    try:
+        runner.run()
+    except RuntimeError as e:
+        logging.exception('Failed to start virt-v2v')
         state['failed'] = True
         write_state(state)
         return
-    state['service_name'] = m.group(1)
+    state['pid'] = runner.pid
 
     try:
         state['started'] = True
-        state['pid'] = proc.pid
         write_state(state)
         with log_parser(v2v_log) as parser:
-            while systemd_is_running(state['service_name']):
+            while runner.is_running():
                 state = parser.parse(state)
                 write_state(state)
                 time.sleep(5)
-            code = systemd_return_code(state['service_name'])
-            logging.info('virt-v2v terminated with return code %d', code)
+            logging.info(
+                'virt-v2v terminated with return code %d',
+                runner.return_code)
             state = parser.parse(state)
     except Exception:
         state['failed'] = True
         logging.exception('Error while monitoring virt-v2v')
         logging.info('Killing virt-v2v process')
-        systemd_kill(state['service_name'])
+        runner.kill()
 
-    state['return_code'] = systemd_return_code(state['service_name'])
+    state['return_code'] = runner.return_code
     write_state(state)
 
     if state['return_code'] != 0:
