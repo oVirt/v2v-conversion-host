@@ -1001,6 +1001,35 @@ class BaseRunner(object):  # {{{
 
 
 # }}}
+class SubprocessRunner(BaseRunner):  # {{{
+
+    def is_running(self):
+        return self._proc.poll() is None
+
+    def kill(self):
+        self._proc.kill()
+
+    @property
+    def pid(self):
+        return self._proc.pid
+
+    @property
+    def return_code(self):
+        self._proc.poll()
+        return self._proc.returncode
+
+    def run(self):
+        with open(self._log, 'w') as log:
+            self._proc = subprocess.Popen(
+                    [VIRT_V2V,] + self._arguments,
+                    stdin=DEVNULL,
+                    stderr=subprocess.STDOUT,
+                    stdout=log,
+                    env=self._environment,
+                    )
+
+
+# }}}
 class SystemdRunner(BaseRunner):  # {{{
     def is_running(self):
         try:
