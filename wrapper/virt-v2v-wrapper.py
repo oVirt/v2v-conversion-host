@@ -1425,7 +1425,7 @@ def main():
                 state['failed'] = not host.handle_finish(data, state)
         except Exception:
             # No need to log the exception, it will get logged below
-            logging.error('An error occured, finishing state file...')
+            logging.exception('An error occured, finishing state file...')
             state['failed'] = True
             write_state(state)
             raise
