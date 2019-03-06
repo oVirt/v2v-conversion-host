@@ -119,11 +119,11 @@ class BaseHost(object):
         """ Prepare virt-v2v command parts that are method dependent """
         return v2v_args, v2v_env
 
-    def get_uid(self, data):
+    def get_uid(self):
         """ Tell under which user to run virt-v2v """
         return os.geteuid()
 
-    def get_gid(self, data):
+    def get_gid(self):
         """ Tell under which group to run virt-v2v """
         return os.getegid()
 
@@ -439,6 +439,7 @@ class VDSMHost(BaseHost):
             self.sdk.types.StorageType.ISCSI,
             self.sdk.types.StorageType.POSIXFS,
             )
+        self._export_domain = False
 
     @contextmanager
     def sdk_connection(self, data):
@@ -578,14 +579,14 @@ class VDSMHost(BaseHost):
 
         return v2v_args, v2v_env
 
-    def get_uid(self, data):
+    def get_uid(self):
         """ Tell under which user to run virt-v2v """
-        if 'export_domain' in data:
+        if self._export_domain:
             # Need to be root to mount NFS share
             return 0
         return VDSMHost.VDSM_UID
 
-    def get_gid(self, data):
+    def get_gid(self):
         """ Tell under which group to run virt-v2v """
         return VDSMHost.VDSM_GID
 
@@ -597,6 +598,7 @@ class VDSMHost(BaseHost):
             # Cannot use libvirt backend as root on VDSM host due to
             # permissions
             direct_backend = True
+            self._export_domain = True
         if direct_backend:
             data['backend'] = 'direct'
 
@@ -1364,17 +1366,17 @@ def main():
         if 'vmware_password' in data:
             data['vmware_password_file'] = write_password(
                     data['vmware_password'], password_files,
-                    host.get_uid(data), host.get_gid(data))
+                    host.get_uid(data), host.get_gid())
         if 'rhv_password' in data:
             data['rhv_password_file'] = write_password(data['rhv_password'],
                                                        password_files,
-                                                       host.get_uid(data),
-                                                       host.get_gid(data))
+                                                       host.get_uid(),
+                                                       host.get_gid())
         if 'ssh_key' in data:
             data['ssh_key_file'] = write_password(data['ssh_key'],
                                                   password_files,
-                                                  host.get_uid(data),
-                                                  host.get_gid(data))
+                                                  host.get_uid(),
+                                                  host.get_gid())
 
         # Create state file before dumping the JSON
         state = {
