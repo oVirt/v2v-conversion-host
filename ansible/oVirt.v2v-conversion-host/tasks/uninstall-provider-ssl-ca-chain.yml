@@ -1,8 +1,6 @@
 ---
 - name: Delete CA chain file in anchors
   file:
-    dest: "/etc/pki/ca-trust/source/anchors/{{ manageiq_provider.hostname }}-ca-chain.pem"
+    dest: "/etc/pki/ca-trust/source/anchors/v2v-conversion-host-ca-bundle.pem"
     state: absent
-
-- name: Update the ca-trust bundle
-  command: /usr/bin/update-ca-trust
+  notify: Update ca-trust bundle

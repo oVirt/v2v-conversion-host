@@ -4,21 +4,11 @@
     name:
       - nbdkit
       - nbdkit-plugin-python2
+      - virt-v2v
     state: "{{ v2v_yum_check }}"
-
-- name: Register nbdkit version
-  command: "rpm -q --queryformat '%{VERSION}' nbdkit"
-  args:
-    warn: false
-  register: pkg_nbdkit
-
-- name: Install virt-v2v
-  yum:
-    state: "{{ v2v_yum_check }}"
-    name: virt-v2v
 
 - name: Install virt-v2v wrapper
   copy:
-    src: "virt-v2v-wrapper.py"
-    dest: "/usr/bin/"
+    src: "usr/bin/virt-v2v-wrapper.py"
+    dest: "/usr/bin/virt-v2v-wrapper.py"
     mode: 0755
