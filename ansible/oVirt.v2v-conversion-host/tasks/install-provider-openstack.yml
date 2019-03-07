@@ -9,8 +9,8 @@
 
 - name: Create cron job for log cleanup
   copy:
-    src: etc/cron.daily/virt-v2-logs
-    dest: /etc/cron.daily/virt-v2-logs
+    src: etc/cron.daily/virt-v2v-logs
+    dest: /etc/cron.daily/virt-v2v-logs
     owner: root
     group: root
     mode: 0755
