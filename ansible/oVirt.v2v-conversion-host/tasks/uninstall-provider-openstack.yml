@@ -1,2 +1,4 @@
 ---
-- include_tasks: "uninstall-provider-openstack-cron-jobs.yml"
+- name: Delete cron job for log cleanup
+  file:
+    path: /etc/cron.daily/virt-v2-logs

@@ -1,23 +1,11 @@
 ---
-- name: Set fact provider_ssl_ca_chain
-  set_fact:
-    provider_ssl_ca_chain: "{{ item.endpoint.certificate_authority }}"
+- name: Create CA chain file in anchors
+  copy:
+    dest: "/etc/pki/ca-trust/source/anchors/v2v-conversion-host-ca-bundle.pem"
+    content: "{{ v2v_ca_bundle }}"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Update ca-trust bundle
   when:
-    - "item.endpoint.role == 'default'"
-    - "item.endpoint.certificate_authority is defined"
-  with_items: "{{ manageiq_provider.connection_configurations }}"
-
-- block:
-    - name: Create CA chain file in anchors
-      copy:
-        dest: "/etc/pki/ca-trust/source/anchors/{{ manageiq_provider.hostname }}-ca-chain.pem"
-        content: "{{ provider_ssl_ca_chain }}"
-        owner: root
-        group: root
-        mode: 0644
-
-    - name: Update the ca-trust bundle
-      command: /usr/bin/update-ca-trust
-
-  when:
-    - "provider_ssl_ca_chain is defined"
+    - "v2v_ca_bundle is defined"        
