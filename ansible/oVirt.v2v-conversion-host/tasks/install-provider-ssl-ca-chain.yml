@@ -8,4 +8,4 @@
     mode: 0644
   notify: Update ca-trust bundle
   when:
-    - "v2v_ca_bundle is defined"        
+    - "v2v_ca_bundle is defined"
