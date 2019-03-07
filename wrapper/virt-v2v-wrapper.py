@@ -101,6 +101,9 @@ class BaseHost(object):
 
     # Interface
 
+    def create_runner(self, *args, **kwargs):
+        raise NotImplementedError()
+
     def getLogs(self):
         return ('/tmp', '/tmp')
 
@@ -141,6 +144,9 @@ class BaseHost(object):
 
 class OSPHost(BaseHost):
     TYPE = BaseHost.TYPE_VDSM
+
+    def create_runner(self, *args, **kwargs):
+        return SystemdRunner(self, *args, **kwargs)
 
     def getLogs(self):
         log_dir = '/var/log/virt-v2v'
@@ -461,6 +467,9 @@ class VDSMHost(BaseHost):
         finally:
             if connection is not None:
                 connection.close()
+
+    def create_runner(self, *args, **kwargs):
+        return SystemdRunner(self, *args, **kwargs)
 
     def getLogs(self):
         """ Returns tuple with directory for virt-v2v log and wrapper log """
@@ -1203,7 +1212,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     logging.info('Starting virt-v2v:')
     log_command_safe(v2v_args, v2v_env)
 
-    runner = SystemdRunner(host, v2v_args, v2v_env, v2v_log)
+    runner = host.create_runner(v2v_args, v2v_env, v2v_log)
     try:
         runner.run()
     except RuntimeError as e:
