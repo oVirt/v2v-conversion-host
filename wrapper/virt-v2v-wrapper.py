@@ -961,6 +961,7 @@ class OutputParser(object):  # {{{
         line = None
         while line != b'':
             line = self._log.readline()
+            logging.debug('%r', line)
             state = self.parse_line(state, line)
         return state
 
@@ -1832,6 +1833,10 @@ def main():
     # Read and parse input -- hopefully this should be safe to do as root
     data = json.load(sys.stdin)
 
+    # Fill in defaults
+    if 'daemonize' not in data:
+        data['daemonize'] = True
+
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
 
@@ -1962,8 +1967,16 @@ def main():
             }))
 
             # Let's get to work
-            logging.info('Daemonizing')
-            daemonize()
+            if 'daemonize' not in data or data['daemonize']:
+                logging.info('Daemonizing')
+                daemonize()
+            else:
+                logging.info('Staying in foreground as requested')
+                handler = logging.StreamHandler(sys.stdout)
+                handler.setLevel(logging.DEBUG)
+                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                handler.setFormatter(formatter)
+                logging.getLogger().addHandler(handler)
             agent_pid = None
             agent_sock = None
             if data['transport_method'] == 'ssh':
