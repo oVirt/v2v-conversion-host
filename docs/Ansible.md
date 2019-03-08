@@ -6,6 +6,7 @@ to be changed.
 
 | Variable                       | Default value | Description                                                                                                                   |
 | -----------------------------  | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| v2v_host_type                  |               | Platform where the conversion host is deployed. Valid values: `rhevm`, `openstack`.                                           |
 | v2v_transport_method           |               | Transport methods to configure on the conversion host. Valid values: `vddk`, 'ssh`.                                           |
 | v2v_vddk_package_url           |               | URL to the VDDK library package.                                                                                              |
 | v2v_vddk_override              | false         | Normally the install role is not run if the plugin is already installed. To force the deployment set this variable to `true`. |
@@ -31,7 +32,7 @@ all:
   vars:
   hosts:
     chost1.example.com:
-      v2v_host_type: rhv
+      v2v_host_type: rhevm
       v2v_transport_method: vddk
     chost2.example.com:
       v2v_host_type: openstack
