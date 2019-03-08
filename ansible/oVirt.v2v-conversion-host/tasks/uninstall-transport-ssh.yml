@@ -5,7 +5,7 @@
 #     ssh_config_path: "/var/lib/vdsm/.ssh"
 #     ssh_config_owner: "vdsm"
 #   when:
-#     - "v2v_host_type == 'rhv'"
+#     - "v2v_host_type == 'rhevm'"
 
 - name: Set facts ssh_config_path, ssh_config_owner
   set_fact:
