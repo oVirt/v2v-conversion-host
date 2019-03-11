@@ -113,7 +113,7 @@ class BaseHost(object):
         return True
 
     def check_install_drivers(self, data):
-        error('cannot check_install_drivers for unknown host type')
+        hard_error('cannot check_install_drivers for unknown host type')
 
     def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
         """ Prepare virt-v2v command parts that are method dependent """
@@ -125,7 +125,7 @@ class BaseHost(object):
 
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
-        error("Cannot validate data for uknown host type")
+        hard_error("Cannot validate data for uknown host type")
 #
 #  }}}
 #
@@ -333,7 +333,7 @@ class OSPHost(BaseHost):
                 'osp_server_id',
                 ]:
             if k not in data:
-                error('Missing argument: %s' % k)
+                hard_error('Missing argument: %s' % k)
         if 'insecure_connection' not in data:
             data['insecure_connection'] = False
         if data.get('insecure_connection', False):
@@ -342,14 +342,14 @@ class OSPHost(BaseHost):
         osp_arg_re = re.compile('os[-_]', re.IGNORECASE)
         for k in data['osp_environment'].keys():
             if not osp_arg_re.match(k[:3]):
-                error('found invalid key in OSP environment: %s' % k)
+                hard_error('found invalid key in OSP environment: %s' % k)
         if 'osp_guest_id' not in data:
             data['osp_guest_id'] = uuid.uuid4()
         if not isinstance(data['osp_security_groups_ids'], list):
-            error('osp_security_groups_ids must be a list')
+            hard_error('osp_security_groups_ids must be a list')
         for mapping in data['network_mappings']:
             if 'mac_address' not in mapping:
-                error('Missing mac address in one of network mappings')
+                hard_error('Missing mac address in one of network mappings')
         return data
 
     def _get_disk_name(self, index):
@@ -514,7 +514,7 @@ class VDSMHost(BaseHost):
             iso_name = data.get('virtio_win')
             if iso_name is not None:
                 if iso_domain is None:
-                    error('ISO domain not found')
+                    hard_error('ISO domain not found')
             else:
                 if iso_domain is None:
                     # This is not an error
@@ -536,8 +536,8 @@ class VDSMHost(BaseHost):
             full_path = os.path.join(iso_domain, iso_name)
 
         if not os.path.isfile(full_path):
-            error("'virtio_win' must be a path or file name of image in "
-                  "ISO domain")
+            hard_error('"virtio_win" must be a path or file name of image in '
+                       'ISO domain')
         data['virtio_win'] = full_path
         logging.info("virtio_win (re)defined as: %s", data['virtio_win'])
 
@@ -620,8 +620,8 @@ class VDSMHost(BaseHost):
         # Output file format (raw or qcow2)
         if 'output_format' in data:
             if data['output_format'] not in ('raw', 'qcow2'):
-                error('Invalid output format %r, expected raw or qcow2' %
-                      data['output_format'])
+                hard_error('Invalid output format %r, expected raw or qcow2' %
+                           data['output_format'])
         else:
             data['output_format'] = 'raw'
 
@@ -633,7 +633,7 @@ class VDSMHost(BaseHost):
                     'rhv_storage',
                     ]:
                 if k not in data:
-                    error('Missing argument: %s' % k)
+                    hard_error('Missing argument: %s' % k)
             if 'rhv_cafile' not in data:
                 logging.info('Path to CA certificate not specified')
                 data['rhv_cafile'] = VDSMHost.VDSM_CA
@@ -642,7 +642,7 @@ class VDSMHost(BaseHost):
         elif 'export_domain' in data:
             pass
         else:
-            error('No target specified')
+            hard_error('No target specified')
 
         # Insecure connection
         if 'insecure_connection' not in data:
@@ -661,8 +661,8 @@ class VDSMHost(BaseHost):
                 domains = service.list(search='name="%s"' %
                                        str(data['rhv_storage']))
                 if len(domains) != 1:
-                    error('Found %d domains matching "%s"!' %
-                          (len(domains), data['rhv_storage']))
+                    hard_error('Found %d domains matching "%s"!' %
+                               (len(domains), data['rhv_storage']))
                 domain_type = domains[0].storage.type
             logging.info('Storage domain "%s" is of type %r',
                          data['rhv_storage'], domain_type)
@@ -763,7 +763,7 @@ class VDSMHost(BaseHost):
 #
 
 
-def error(msg):
+def hard_error(msg):
     """
     Function to produce an error and terminate the wrapper.
 
@@ -1263,7 +1263,7 @@ def main():
     # Collect virt-v2v capabilities
     virt_v2v_caps = virt_v2v_capabilities()
     if virt_v2v_caps is None:
-        error('Could not get virt-v2v capabilities.')
+        hard_error('Could not get virt-v2v capabilities.')
     logging.debug("virt-v2v capabilities: %r" % virt_v2v_caps)
 
     try:
@@ -1271,13 +1271,14 @@ def main():
         # Make sure all the needed keys are in data. This is rather poor
         # validation, but...
         if 'vm_name' not in data:
-                error('Missing vm_name')
+                hard_error('Missing vm_name')
 
         # Transports (only VDDK for now)
         if 'transport_method' not in data:
-            error('No transport method specified')
+            hard_error('No transport method specified')
         if data['transport_method'] not in ('ssh', 'vddk'):
-            error('Unknown transport method: %s', data['transport_method'])
+            hard_error('Unknown transport method: %s',
+                       data['transport_method'])
 
         if data['transport_method'] == 'vddk':
             for k in [
@@ -1286,7 +1287,7 @@ def main():
                     'vmware_password',
                     ]:
                 if k not in data:
-                    error('Missing argument: %s' % k)
+                    hard_error('Missing argument: %s' % k)
 
         # Network mappings
         if 'network_mappings' in data:
@@ -1294,10 +1295,10 @@ def main():
                 for mapping in data['network_mappings']:
                     if not all(
                             k in mapping for k in ("source", "destination")):
-                        error("Both 'source' and 'destination'"
-                              " must be provided in network mapping")
+                        hard_error('Both "source" and "destination"'
+                                   ' must be provided in network mapping')
             else:
-                error("'network_mappings' must be an array")
+                hard_error('"network_mappings" must be an array')
 
         # Virtio drivers
         if 'virtio_win' in data:
@@ -1312,7 +1313,7 @@ def main():
         data = host.validate_data(data)
 
         #
-        # NOTE: don't use error() beyond this point!
+        # NOTE: don't use hard_error() beyond this point!
         #
 
         # Store password(s)
