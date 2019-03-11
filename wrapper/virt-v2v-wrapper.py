@@ -757,6 +757,52 @@ class VDSMHost(BaseHost):
 #
 
 
+class State(object):  # {{{
+    """ State object (which is a dict inside) implemented as singleton """
+    class __StateObject:
+        def __init__(self):
+            # For now keep content as dict. Idealy this should be changed
+            # later too.
+            self._state = {
+                'disks': [],
+                'internal': {
+                    'disk_ids': {},
+                    'display_name': None,
+                    'ports': [],
+                    },
+                'failed': False,
+                }
+            self._filename = None
+
+        def __getattr__(self, name):
+            return getattr(self._state, name)
+
+        def __str__(self):
+            return repr(self._state)
+
+        def get_filename(self):
+            return self._filename
+
+        def set_filename(self, name):
+            self._filename = name
+
+        def write(self):
+            state = self._state.copy()
+            del state['internal']
+            with open(self._filename, 'w') as f:
+                json.dump(state, f)
+
+    instance = None
+
+    def __init__(self):
+        if not State.instance:
+            State.instance = State.__StateObject()
+
+    def __getattr__(self, name):
+        return getattr(self.instance, name)
+
+
+# }}}
 def hard_error(msg):
     """
     Function to produce an error and terminate the wrapper.
@@ -1147,14 +1193,6 @@ def log_parser(v2v_log):
             parser.close()
 
 
-def write_state(state):
-    state_file = state['internal']['state_file']
-    state = state.copy()
-    del state['internal']
-    with open(state_file, 'w') as f:
-        json.dump(state, f)
-
-
 def prepare_command(data, v2v_caps, agent_sock=None):
     v2v_args = [
         '-v', '-x',
@@ -1218,17 +1256,17 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     except RuntimeError as e:
         logging.exception('Failed to start virt-v2v')
         state['failed'] = True
-        write_state(state)
+        state.write()
         return
     state['pid'] = runner.pid
 
     try:
         state['started'] = True
-        write_state(state)
+        state.write()
         with log_parser(v2v_log) as parser:
             while runner.is_running():
                 state = parser.parse(state)
-                write_state(state)
+                state.write()
                 time.sleep(5)
             logging.info(
                 'virt-v2v terminated with return code %d',
@@ -1241,11 +1279,11 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
         runner.kill()
 
     state['return_code'] = runner.return_code
-    write_state(state)
+    state.write()
 
     if state['return_code'] != 0:
         state['failed'] = True
-    write_state(state)
+    state.write()
 
 
 def write_password(password, password_files, uid, gid):
@@ -1405,7 +1443,9 @@ def main():
     v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
-    state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
+    state = State().instance
+    state.set_filename(
+        os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag))
 
     log_format = '%(asctime)s:%(levelname)s:' \
         + ' %(message)s (%(module)s:%(lineno)d)'
@@ -1417,7 +1457,7 @@ def main():
     logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
     logging.info('Will store virt-v2v log in: %s', v2v_log)
-    logging.info('Will store state file in: %s', state_file)
+    logging.info('Will store state file in: %s', state.get_filename())
 
     password_files = []
 
@@ -1494,17 +1534,6 @@ def main():
                                                   host.get_uid(),
                                                   host.get_gid())
 
-        # Create state file before dumping the JSON
-        state = {
-                'disks': [],
-                'internal': {
-                    'disk_ids': {},
-                    'display_name': None,
-                    'ports': [],
-                    'state_file': state_file,
-                    },
-                'failed': False,
-                }
         try:
             if 'source_disks' in data:
                 logging.debug('Initializing disk list from %r',
@@ -1518,13 +1547,14 @@ def main():
                         'progress': 0})
                 logging.debug('Internal disk list: %r', state['disks'])
                 state['disk_count'] = len(data['source_disks'])
-            write_state(state)
+            # Create state file before dumping the JSON
+            state.write()
 
             # Send some useful info on stdout in JSON
             print(json.dumps({
                 'v2v_log': v2v_log,
                 'wrapper_log': wrapper_log,
-                'state_file': state_file,
+                'state_file': state.get_filename(),
             }))
 
             # Let's get to work
@@ -1545,7 +1575,7 @@ def main():
             # No need to log the exception, it will get logged below
             logging.exception('An error occured, finishing state file...')
             state['failed'] = True
-            write_state(state)
+            state.write()
             raise
         finally:
             if state.get('failed', False):
@@ -1555,7 +1585,7 @@ def main():
                     host.handle_cleanup(data, state)
                 finally:
                     state['finished'] = True
-                    write_state(state)
+                    state.write()
 
         # Remove password files
         logging.info('Removing password files')
@@ -1566,7 +1596,7 @@ def main():
                 logging.exception('Error while removing password file: %s' % f)
 
         state['finished'] = True
-        write_state(state)
+        state.write()
 
     except Exception:
         logging.exception('Wrapper failure')
