@@ -1481,7 +1481,7 @@ def main():
         if 'vmware_password' in data:
             data['vmware_password_file'] = write_password(
                     data['vmware_password'], password_files,
-                    host.get_uid(data), host.get_gid())
+                    host.get_uid(), host.get_gid())
         if 'rhv_password' in data:
             data['rhv_password_file'] = write_password(data['rhv_password'],
                                                        password_files,
