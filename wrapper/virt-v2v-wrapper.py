@@ -216,17 +216,17 @@ class OSPHost(BaseHost):
 
         # Init keystone
         if self._run_openstack(['token', 'issue'], data) is None:
-            logging.error('Create VM failed')
+            error('Create VM failed')
             return False
         volumes = []
         # Build volume list
         for k in sorted(state['internal']['disk_ids'].keys()):
             volumes.append(state['internal']['disk_ids'][k])
         if len(volumes) == 0:
-            logging.error('No volumes found!')
+            error('No volumes found!')
             return False
         if len(volumes) != len(state['internal']['disk_ids']):
-            logging.error('Detected duplicate indices of Cinder volumes')
+            error('Detected duplicate indices of Cinder volumes')
             logging.debug('Source volume map: %r',
                           state['internal']['disk_ids'])
             logging.debug('Assumed volume list: %r', volumes)
@@ -240,7 +240,7 @@ class OSPHost(BaseHost):
                 vol,
                 ], data)
             if transfer is None:
-                logging.error('Failed to transfer volume')
+                error('Failed to transfer volume')
                 return False
             transfer = json.loads(transfer)
             self._run_openstack([
@@ -267,7 +267,7 @@ class OSPHost(BaseHost):
                 port_cmd.extend(['--security-group', grp])
             port = self._run_openstack(port_cmd, data, destination=True)
             if port is None:
-                logging.error('Failed to create port')
+                error('Failed to create port')
                 return False
             port = json.loads(port)
             logging.info('Created port id=%s', port['id'])
@@ -291,7 +291,7 @@ class OSPHost(BaseHost):
         os_command.append(vm_name)
         # Let's get rolling...
         if self._run_openstack(os_command, data, destination=True) is None:
-            logging.error('Create VM failed')
+            error('Create VM failed')
             return False
         else:
             return True
@@ -743,9 +743,9 @@ class VDSMHost(BaseHost):
                     if line.rstrip() == 'CLASS=Iso':
                         return True
         except OSError:
-            logging.exception('Failed to read domain metadata')
+            error('Failed to read domain metadata', exception=True)
         except IOError:
-            logging.exception('Failed to read domain metadata')
+            error('Failed to read domain metadata', exception=True)
         return False
 
 #
@@ -815,6 +815,45 @@ def hard_error(msg):
     logging.error(msg)
     sys.stderr.write(msg)
     sys.exit(1)
+
+
+def error(short_message, *args, **kwargs):
+    """
+    Used for error reporting, e.g.:
+
+        error('Failed create port')
+        error('sock=%r; pid=%r', sock, pid)
+        error(e.args[0],
+              'An error occured, finishing state file...',
+              exception=True)
+
+    Note that this function is not mean to be used for all errors, only those
+    that should be visible to the user. Essentially we want to report only the
+    first error we encounter and do that in the form that is easy to understand
+    to the user. For example, this function should not be used in
+    handle_cleanup() methods. It is not used in _run_openstack() either because
+    the error is not fit for user and caller should take care of proper error
+    report.
+    """
+    if 'exception' in kwargs:
+        is_exception = bool(kwargs['exception'])
+        del kwargs['exception']
+    else:
+        is_exception = False
+    if len(args) == 0:
+        args = (short_message,)  # NOTE: tuple!!!
+    if is_exception:
+        logging.info('have exception: %r %r', args, kwargs)
+        logging.exception(*args, **kwargs)
+    else:
+        logging.info('have error: %r %r', args, kwargs)
+        logging.error(*args, **kwargs)
+    state = State().instance
+    state['last_message'] = {
+        'message': short_message,
+        'type': 'error'
+        }
+    state.write()
 
 
 def daemonize():
@@ -910,7 +949,10 @@ class OutputParser(object):  # {{{
                         len(state['disks']),
                         state['disk_count'])
             except ValueError:
-                logging.exception('Conversion error')
+                error(
+                    'Failed to decode disk number',
+                    'Failed to decode disk number -- conversion error',
+                    exception=True)
 
         # VDDK
         m = self.NBDKIT_DISK_PATH_RE.match(line)
@@ -958,7 +1000,10 @@ class OutputParser(object):  # {{{
                         float(m.group(1))
                     logging.debug('Updated progress: %s', m.group(1))
                 except ValueError:
-                    logging.exception('Conversion error')
+                    error(
+                        'Failed to decode progress'
+                        'Failed to decode progress -- conversion error',
+                        exception=True)
             else:
                 logging.debug('Skipping progress update for unknown disk')
 
@@ -1105,7 +1150,7 @@ class SystemdRunner(BaseRunner):  # {{{
         try:
             subprocess.check_call(['systemctl', 'kill', self._service_name])
         except subprocess.CalledProcessError:
-            logging.exception('Failed to kill virt-v2v unit')
+            error('Failed to kill virt-v2v unit', exception=True)
 
     def run(self):
         unit = [
@@ -1172,12 +1217,12 @@ class SystemdRunner(BaseRunner):  # {{{
         """ Return code after the unit exited """
         code = self._systemd_property('ExecMainStatus')
         if code is None:
-            logging.error('Failed to get virt-v2v return code')
+            error('Failed to get virt-v2v return code')
             return -1
         try:
             return int(code)
         except ValueError:
-            logging.exception('Failed to parse return code')
+            error('Failed to decode virt-v2v return code', exception=True)
             return -1
 
 
@@ -1254,7 +1299,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     try:
         runner.run()
     except RuntimeError as e:
-        logging.exception('Failed to start virt-v2v')
+        error('Failed to start virt-v2v', exception=True)
         state['failed'] = True
         state.write()
         return
@@ -1274,7 +1319,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
             state = parser.parse(state)
     except Exception:
         state['failed'] = True
-        logging.exception('Error while monitoring virt-v2v')
+        error('Error while monitoring virt-v2v', exception=True)
         logging.info('Killing virt-v2v process')
         runner.kill()
 
@@ -1302,7 +1347,7 @@ def spawn_ssh_agent(data):
         sock = re.search(br'^SSH_AUTH_SOCK=([^;]+);', out, re.MULTILINE)
         pid = re.search(br'^echo Agent pid ([0-9]+);', out, re.MULTILINE)
         if not sock or not pid:
-            logging.error(
+            error(
                 'Incomplete match of ssh-agent output; sock=%r; pid=%r',
                 sock, pid)
             return None, None
@@ -1310,10 +1355,10 @@ def spawn_ssh_agent(data):
         agent_pid = int(pid.group(1))
         logging.info('SSH Agent started with PID %d', agent_pid)
     except subprocess.CalledProcessError:
-        logging.exception('Failed to start ssh-agent')
+        error('Failed to start ssh-agent', exception=True)
         return None, None
     except ValueError:
-        logging.exception('Failed to parse ssh-agent output')
+        error('Failed to parse ssh-agent output', exception=True)
         return None, None
     env = os.environ.copy()
     env['SSH_AUTH_SOCK'] = agent_sock
@@ -1330,7 +1375,7 @@ def spawn_ssh_agent(data):
             stderr=subprocess.STDOUT,
             stdin=DEVNULL)
     except subprocess.CalledProcessError as e:
-        logging.exception('Failed to add SSH keys to the agent!')
+        error('Failed to add SSH keys to the agent', exception=True)
         logging.error("ssh-add output: %s", e.output)
         os.kill(agent_pid, signal.SIGTERM)
         return None, None
@@ -1571,9 +1616,11 @@ def main():
                 os.kill(agent_pid, signal.SIGTERM)
             if not state.get('failed', False):
                 state['failed'] = not host.handle_finish(data, state)
-        except Exception:
+        except Exception as e:
             # No need to log the exception, it will get logged below
-            logging.exception('An error occured, finishing state file...')
+            error(e.args[0],
+                  'An error occured, finishing state file...',
+                  exception=True)
             state['failed'] = True
             state.write()
             raise
@@ -1593,7 +1640,9 @@ def main():
             try:
                 os.remove(f)
             except OSError:
-                logging.exception('Error while removing password file: %s' % f)
+                error('Error removing password file(s)',
+                      'Error removing password file: %s' % f,
+                      exception=True)
 
         state['finished'] = True
         state.write()
@@ -1606,7 +1655,9 @@ def main():
             try:
                 os.remove(f)
             except OSError:
-                logging.exception('Error removing password file: %s' % f)
+                error('Error removing password file(s)',
+                      'Error removing password file: %s' % f,
+                      exception=True)
         # Re-raise original error
         raise
 
