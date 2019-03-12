@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RPM_VERSION="1.9.1"
+RPM_VERSION="1.9.2"
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
     RPM_RELEASE="1"
 else

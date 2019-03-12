@@ -41,6 +41,14 @@ sh build.sh install
 %license LICENSE
 
 %changelog
+* Tue Mar 12 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.9.2-1
+- Wrapper changes:
+  * Extended error reporting to state file
+  * Fix cleanup of OSP volumes on error
+  * Fix incorrect VM name when for SSH transfer (BZ#
+- Roles changes:
+  * Make conversion host record creation idempotent (#25)
+
 * Tue Jan 22 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.9.1-1
 - Wrapper changes:
   * Fix regex matching OSP volume IDs (BZ#1668049)
