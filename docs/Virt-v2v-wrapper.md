@@ -222,17 +222,25 @@ Right before the wrapper terminates it updates the state with:
 ## Conversion throttling (rate limiting)
 
 It is possible to throttle resources used by the conversion. At the moment one
-can limit only CPU.
+can limit CPU and network bandwidth. Before wrapper detaches to background
 
 Example of throttling file content:
 
 ```
 {
     "cpu": "50%",
+    "network": "1048576"
 }
 ```
 
-This will assign half of single CPU to the process.
+This will assign half of single CPU to the process and limit network bandwidth
+to 1 MB/s.
+
+Limits read from the throttling file are added to those already in place. That
+means one does not strictly need to include all the possible limits in the
+file. Although it is suggested to do so. Otherwise some information can be lost
+if multiple changes occur to the throttling file before the wrapper manages to
+read them.
 
 To remove a limit one should assign value `unlimited`.
 
@@ -251,4 +259,14 @@ From systemd.resource-control(5):
     hierarchy and "cpu.cfs_quota_us" on legacy.
 
 For example, to assign half of one CPU use "50%" or to assign two CPUs use
-"200%".
+"200%". To remove any limit on CPU one can pass the string "unlimited".
+
+
+### Network Bandwidth
+
+Due to design of cgroup filter on tc the network is limited on output only.
+(Input is limited only indirectly and is unreliable.)
+
+The limit is specified in bytes per seconds without any units. E.g. "12345".
+Note that despite being a number it should be passed as string in JSON. To
+remove any limit one can pass the string "unlimited".

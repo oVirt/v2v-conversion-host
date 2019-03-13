@@ -50,6 +50,8 @@ Ansible role to setup hosts as conversion host for ManageIQ
 
 %package wrapper
 Summary: Daemonizing wrapper for virt-v2v
+Requires: libcgroup-tools
+Requires: python
 BuildArch: noarch
 
 %description wrapper
