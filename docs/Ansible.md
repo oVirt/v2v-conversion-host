@@ -7,11 +7,11 @@ to be changed.
 | Variable                       | Default value | Description                                                                                                                   |
 | -----------------------------  | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | v2v_host_type                  |               | Platform where the conversion host is deployed. Valid values: `rhevm`, `openstack`.                                           |
-| v2v_transport_method           |               | Transport methods to configure on the conversion host. Valid values: `vddk`, 'ssh`.                                           |
+| v2v_transport_method           |               | Transport method to configure on the conversion host. Valid values: `vddk`, 'ssh`.                                            |
 | v2v_vddk_package_url           |               | URL to the VDDK library package.                                                                                              |
 | v2v_vddk_override              | false         | Normally the install role is not run if the plugin is already installed. To force the deployment set this variable to `true`. |
 | v2v_ssh_private_key            |               | The private key to use to connect to the VMware host.                                                                         |
-| v2v_ca_bundle                  |               | A bundle of CA certificates to allow connection to the provider where the conversion host belongs. See below for value.       | 
+| v2v_ca_bundle                  |               | A bundle of CA certificates to allow connection to the provider where the conversion host belongs. See below for value.       |
 | v2v_checks_override            | false         | The install role does performs some compatibility checks. By setting `v2v_checks_override` to `true` one can disable them.    |
 | v2v_yum_check                  | latest        | Can be used to change the requirement on installed packages. Normally we check if the installed packages are at the latest version. This can cause troubles on disconnected or unconfigured systems. In that case the check can be ... by setting the value to `present`. (Since 1.7) |
 
