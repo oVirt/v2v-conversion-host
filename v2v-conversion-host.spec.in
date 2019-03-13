@@ -15,7 +15,7 @@ Name: @PACKAGE_NAME@
 Summary: Set of tools for configuring conversion hosts for ManageIQ
 Version: @RPM_VERSION@
 Release: @RPM_RELEASE@%{?release_suffix}%{?dist}
-Source0: https://github.com/oVirt/ovirt-ansible-v2v-conversion-host/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Source0: https://github.com/oVirt/v2v-conversion-host/releases/download/v%{version}/%{name}-%{version}.tar.gz
 License: ASL 2.0
 Group:          Virtualization/Management
 Url:            http://www.ovirt.org

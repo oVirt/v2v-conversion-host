@@ -24,8 +24,7 @@ firstboot --disable
 
 
 %packages
-ansible
-ovirt-ansible-v2v-conversion-host
+v2v-conversion-host-wrapper
 
 # tasks/install.yml
 nbdkit  # nbdkit source requires RHEL 7.6 or RHV channel

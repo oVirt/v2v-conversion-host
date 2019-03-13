@@ -37,8 +37,8 @@ python-six
 echo "Installing oVirt repo.."
 yum install -y http://resources.ovirt.org/pub/yum-repo/ovirt-release42.rpm
 
-echo "Installing ovirt-ansible-v2v-conversion-host package.."
-yum install -y ovirt-ansible-v2v-conversion-host
+echo "Installing v2v-conversion-host-wrapper package.."
+yum install -y v2v-conversion-host-wrapper
 
 echo "Downloading virtio-win ISO"
 mkdir -p /usr/share/virtio-win
