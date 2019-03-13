@@ -5,10 +5,5 @@
       - nbdkit
       - nbdkit-plugin-python2
       - virt-v2v
+      - v2v-conversion-host-wrapper
     state: "{{ v2v_yum_check }}"
-
-- name: Install virt-v2v wrapper
-  copy:
-    src: "usr/bin/virt-v2v-wrapper.py"
-    dest: "/usr/bin/virt-v2v-wrapper.py"
-    mode: 0755
