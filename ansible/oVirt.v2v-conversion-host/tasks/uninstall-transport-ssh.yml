@@ -5,7 +5,7 @@
 #     ssh_config_path: "/var/lib/vdsm/.ssh"
 #     ssh_config_owner: "vdsm"
 #   when:
-#     - "v2v_host_type == 'rhv'"
+#     - "v2v_host_type == 'rhevm'"
 
 - name: Set facts ssh_config_path, ssh_config_owner
   set_fact:
@@ -14,10 +14,10 @@
   when:
     - "v2v_host_type == 'openstack'"
 
-- include_tasks: "uninstall-transport-ssh-vmware-host-key.yml"
+- name: Delete SSH private key file for VMware host
+  file:
+    path: "{{ ssh_config_path }}/id_rsa"
+    state: absent
   when:
-    - "hostvars[vmware_host]['conversion_ssh_private_key'] is defined"
+    - "v2v_ssh_private_key is defined"
     - "ssh_config_path is defined"
-  loop: "{{ groups['vmware_hosts'] }}"
-  loop_control:
-    loop_var: vmware_host

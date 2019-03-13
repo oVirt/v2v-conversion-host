@@ -4,7 +4,7 @@
     ssh_config_path: "/var/lib/vdsm/.ssh"
     ssh_config_owner: "vdsm"
   when:
-    - "v2v_host_type == 'rhv'"
+    - "v2v_host_type == 'rhevm'"
 
 - name: Set facts ssh_config_path, ssh_config_owner
   set_fact:
@@ -13,4 +13,24 @@
   when:
     - "v2v_host_type == 'openstack'"
 
-- include_tasks: "install-transport-ssh-private-key.yml"
+- name: Look for existing SSH private key file
+  stat:
+    path: "{{ ssh_config_path }}/id_rsa"
+  ignore_errors: "yes"
+  register: stat_ssh_key
+
+- block:
+    - name: Check var v2v_ssh_private_key
+      fail:
+        msg: "No file named '{{ ssh_config_path }}/id_rsa' found and no 'v2v_ssh_private_key' variable set"
+      when:
+        - "v2v_ssh_private_key is not defined"
+
+    - name: Create the SSH private key file
+      copy:
+        dest: "{{ ssh_config_path }}/id_rsa"
+        content: "{{ v2v_ssh_private_key }}"
+        owner: "{{ ssh_config_owner }}"
+        mode: 0600
+
+  when: not stat_ssh_key.stat.exists

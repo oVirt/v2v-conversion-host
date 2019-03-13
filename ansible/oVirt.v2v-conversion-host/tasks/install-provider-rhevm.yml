@@ -1,0 +1,5 @@
+---
+- name: Install oVirt SDK
+  yum:
+    name: python-ovirt-engine-sdk4
+    state: "{{ v2v_yum_check }}"
