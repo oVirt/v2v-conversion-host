@@ -1195,7 +1195,13 @@ class SystemdRunner(BaseRunner):  # {{{
         if pid is None or pid == '':
             raise RuntimeError('Failed to get PID for virt-v2v process')
             logging.info('Running with PID: %s', pid)
-        self._pid = pid
+        try:
+            self._pid = int(pid)
+        except ValueError:
+            error(
+                'Invalid PID for virt-v2v process'
+                'Invalid PID for virt-v2v process: %s', pid,
+                exception=True)
 
     def _systemd_property(self, property_name):
         try:
