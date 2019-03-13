@@ -60,19 +60,19 @@ Daemonizing wrapper for virt-v2v.
 
 %build
 
-%if ! 0%{?fedora}
-export GOPATH=$(pwd)/GOPATH
-d="GOPATH/src/github.com/ovirt"
-mkdir -p "$d"
-pushd "$d"
-    ln -s $(dirs +1 -l) %{name}
-popd
-cd "$d"/%{name}
-%gobuild -o kubevirt-provider/kubevirt-provider %{goipath}/kubevirt-provider
-%else
-%gobuildroot
-%gobuild -o kubevirt-provider/kubevirt-provider %{goipath}/kubevirt-provider
-%endif
+#%if ! 0%{?fedora}
+#export GOPATH=$(pwd)/GOPATH
+#d="GOPATH/src/github.com/ovirt"
+#mkdir -p "$d"
+#pushd "$d"
+#    ln -s $(dirs +1 -l) %{name}
+#popd
+#cd "$d"/%{name}
+#%gobuild -o kubevirt-provider/kubevirt-provider %{goipath}/kubevirt-provider
+#%else
+#%gobuildroot
+#%gobuild -o kubevirt-provider/kubevirt-provider %{goipath}/kubevirt-provider
+#%endif
 
 
 %install
