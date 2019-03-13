@@ -37,16 +37,16 @@ Obsoletes: ovirt-ansible-v2v-conversion-host < 1.11.0-1
 %description ansible
 Ansible role to setup hosts as conversion host for ManageIQ
 
-%package provider
-Summary: Helper service for querying information from VMware
-%if 0%{?fedora}
-BuildRequires:  compiler(go-compiler)
-%else
-BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
-%endif
+#%package provider
+#Summary: Helper service for querying information from VMware
+#%if 0%{?fedora}
+#BuildRequires:  compiler(go-compiler)
+#%else
+#BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
+#%endif
 
-%description provider
-Helper service for querying information from VMware
+#%description provider
+#Helper service for querying information from VMware
 
 %package wrapper
 Summary: Daemonizing wrapper for virt-v2v
@@ -97,11 +97,11 @@ ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_enable.yml %{buildro
 %doc ansible/examples/
 %license LICENSE
 
-%files provider
-%{_bindir}/kubevirt-provider
-%doc README.md
-%doc docs/
-%license LICENSE
+#%files provider
+#%{_bindir}/kubevirt-provider
+#%doc README.md
+#%doc docs/
+#%license LICENSE
 
 %files wrapper
 %{_bindir}/virt-v2v-wrapper*
