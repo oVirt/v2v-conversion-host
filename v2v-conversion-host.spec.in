@@ -6,9 +6,9 @@
 
 #gometa -i
 
-%if ! 0%{?gobuild:1}
-%define gobuild(o:) go build -buildmode=pie -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n')" -tags "$BUILDTAGS" -a -v -x %{?**};
-%endif
+#%if ! 0%{?gobuild:1}
+#%define gobuild(o:) go build -buildmode=pie -ldflags "${LDFLAGS:-} -B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \\n')" -tags "$BUILDTAGS" -a -v -x %{?**};
+#%endif
 
 
 Name: @PACKAGE_NAME@
