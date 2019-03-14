@@ -58,8 +58,8 @@ Daemonizing wrapper for virt-v2v.
 %prep
 %setup -c -q
 
-%build
-
+#%build
+#
 #%if ! 0%{?fedora}
 #export GOPATH=$(pwd)/GOPATH
 #d="GOPATH/src/github.com/ovirt"
