@@ -79,7 +79,7 @@ Daemonizing wrapper for virt-v2v.
 export DATA_DIR=%{buildroot}%{_datadir}
 export BIN_DIR=%{buildroot}%{_bindir}
 sh build.sh install
-install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
+#install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
 
 # Create symlinks for backward compatibility with
 # ovirt-ansible-v2v-conversion-host. Remove this later.
