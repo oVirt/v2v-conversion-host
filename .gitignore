@@ -1,4 +1,6 @@
 *.retry
 *.pyc
 .tox/
+exported-artifacts/
 tests/wrapper/__pycache__/
+v2v-conversion-host.spec
