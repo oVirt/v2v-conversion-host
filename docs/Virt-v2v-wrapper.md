@@ -234,7 +234,7 @@ Example of throttling file content:
 
 This will assign half of single CPU to the process.
 
-To remove a limit (reset to system default) one should assign value `None`.
+To remove a limit one should assign value `unlimited`.
 
 
 ### CPU Usage

@@ -1226,6 +1226,11 @@ class SystemdRunner(BaseRunner):  # {{{
 
     def systemd_set_property(self, property_name, value):
         """ Set configuration property on systemd unit """
+        if value is None:
+            logging.warning(
+                'Cannot set systemd property %s to None,'
+                ' passing empty string', property_name)
+            value = ''
         try:
             subprocess.check_call([
                 'systemctl', 'set-property',
@@ -1342,20 +1347,27 @@ def throttling_update(runner, initial=None):
     processed = {}
     for k, v in six.iteritems(throttling):
         if k == 'cpu':
-            m = re.match("([+0-9]+)%?$", v)
-            if m is not None:
-                v = r'%s%%' % m.group(1)
-                if v != state['throttling']['cpu'] and \
-                        runner.systemd_set_property('CPUQuota', v):
-                    processed[k] = v
+            if v is None or v == 'unlimited':
+                # Treat empty value and 'unlimited' in the same way
+                val = 'unlimited'
+                set_val = ''
+            else:
+                m = re.match("([+0-9]+)%?$", v)
+                if m is not None:
+                    val = r'%s%%' % m.group(1)
+                    set_val = val
                 else:
                     error(
-                        'Failed to set CPU quota',
-                        'Failed to set CPU quota to %s', v)
+                        'Failed to parse value for CPU quota',
+                        'Failed to parse value for CPU quota: %s', v)
+                    continue
+            if val != state['throttling']['cpu'] and \
+                    runner.systemd_set_property('CPUQuota', set_val):
+                processed[k] = val
             else:
                 error(
-                    'Failed to parse value for CPU quota',
-                    'Failed to parse value for CPU quota: %s', v)
+                    'Failed to set CPU quota',
+                    'Failed to set CPU quota to %s', val)
         else:
             logging.debug('Ignoring unknown throttling request: %s', k)
     state['throttling'].update(processed)
