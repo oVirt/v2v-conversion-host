@@ -100,6 +100,9 @@ class BaseHost(object):
         else:
             raise ValueError("Cannot build host of type: %r" % host_type)
 
+    def __init__(self):
+        self._tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
+
     # Interface
 
     def create_runner(self, *args, **kwargs):
@@ -107,6 +110,9 @@ class BaseHost(object):
 
     def getLogs(self):
         return ('/tmp', '/tmp')
+
+    def get_tag(self):
+        return self._tag
 
     def handle_cleanup(self, data, state):
         """ Handle cleanup after failed conversion """
@@ -1578,7 +1584,7 @@ def main():
 
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
-    log_tag = '%s-%d' % (time.strftime('%Y%m%dT%H%M%S'), os.getpid())
+    log_tag = host.get_tag()
     log_dirs = host.getLogs()
     v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
     wrapper_log = os.path.join(log_dirs[1],
