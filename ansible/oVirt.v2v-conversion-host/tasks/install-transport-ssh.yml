@@ -3,6 +3,7 @@
   set_fact:
     ssh_config_path: "/var/lib/vdsm/.ssh"
     ssh_config_owner: "vdsm"
+    ssh_config_group: "kvm"
   when:
     - "v2v_host_type == 'rhevm'"
 
@@ -10,6 +11,7 @@
   set_fact:
     ssh_config_path: "/root/.ssh"
     ssh_config_owner: "root"
+    ssh_config_group: "root"
   when:
     - "v2v_host_type == 'openstack'"
 
@@ -25,6 +27,14 @@
         msg: "No file named '{{ ssh_config_path }}/id_rsa' found and no 'v2v_ssh_private_key' variable set"
       when:
         - "v2v_ssh_private_key is not defined"
+
+    - name: Create .ssh directory
+      file:
+        path: "{{ ssh_config_path }}"
+        owner: "{{ ssh_config_owner }}"
+        group: "{{ ssh_config_group }}"
+        mode: 0700
+        state: present
 
     - name: Create the SSH private key file
       copy:
