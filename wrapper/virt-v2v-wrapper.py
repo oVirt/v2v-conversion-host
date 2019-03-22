@@ -1532,7 +1532,11 @@ def check_rhv_version():
         res = rpmUtils.miscutils.compareEVR(
             (vdsm['epoch'], vdsm['version'], None),  # Ignore release number
             rpmUtils.miscutils.stringToVersion(VDSM_MIN_VERSION))
-        return (res >= 0)
+        if res >= 0:
+            return True
+        print('Version of VDSM on the host: {}{}'.format(
+                '' if vdsm['epoch'] is None else '%s:' % vdsm['epoch'],
+                vdsm['version']))
     print('Minimal required oVirt/RHV version is %s' % VDSM_MIN_RHV)
     return False
 
