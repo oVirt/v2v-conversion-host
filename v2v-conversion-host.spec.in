@@ -129,6 +129,11 @@ if [ $1 -eq 0 -a -h /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Mon Mar 25 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.12.1-1
+- Wrapper changes:
+  * bugfix: chown tasks file in net_cls cgroup
+  * bugfix: fix missing call to parent constructor
+
 * Sun Mar 24 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.12.0-1
 - Wrapper changes:
   * add network throttling
