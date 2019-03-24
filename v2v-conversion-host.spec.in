@@ -129,6 +129,16 @@ if [ $1 -eq 0 -a -h /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Sun Mar 24 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.12.0-1
+- Wrapper changes:
+  * add network throttling
+  * define tag in host class
+  * print VDSM version when RHV version check fails
+  * understand `unlimited` CPU as no limit
+- Roles changes:
+  * added creation of .ssh dir for hosts
+  * uninstall virt-v2v-wrapper package
+
 * Wed Mar 13 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.11.0-1
 - Wrapper changes:
   * start virt-v2v in transient systemd unit
