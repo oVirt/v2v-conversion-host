@@ -441,6 +441,7 @@ class VDSMHost(BaseHost):
     VDSM_GID = 36  # kvm
 
     def __init__(self):
+        super(VDSMHost, self).__init__()
         import ovirtsdk4 as sdk
         self.sdk = sdk
         # For now there are limited possibilities in how we can select
