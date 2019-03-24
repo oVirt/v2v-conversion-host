@@ -1283,7 +1283,10 @@ class SystemdRunner(BaseRunner):  # {{{
         return self._tc.set_limit(limit)
 
     def _prepare_net_cls(self):
-        self._tc = TcController(self._host.get_tag())
+        self._tc = TcController(
+            self._host.get_tag(),
+            self._host.get_uid(),
+            self._host.get_gid())
         return self._tc.cgroup
 
     def _systemd_return_code(self):
@@ -1322,10 +1325,11 @@ class TcController(object):
         minor = int(parts[1], base=16)
         return '0x{:04x}{:04x}'.format(major, minor)
 
-    def __init__(self, tag):
+    def __init__(self, tag, uid, gid):
         self._cgroup = 'v2v-conversion/%s' % tag
         self._class_id = None
         self._interfaces = []
+        self._owner = (uid, gid)
         self._prepare()
 
     @property
@@ -1367,6 +1371,10 @@ class TcController(object):
         cgroup_dir = '/sys/fs/cgroup/net_cls/%s' % self._cgroup
         atexit_command(['/usr/bin/rmdir', '-p', cgroup_dir])
         os.makedirs(cgroup_dir)
+        # Change ownership of 'tasks' file so cgexec can write into it
+        os.chown(
+            os.path.join(cgroup_dir, 'tasks'),
+            self._owner[0], self._owner[1])
         # Store class ID
         if self._class_id is not None:
             with open(os.path.join(cgroup_dir, 'net_cls.classid'), 'w') as f:
