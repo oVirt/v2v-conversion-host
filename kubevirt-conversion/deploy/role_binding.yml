@@ -1,0 +1,12 @@
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kubevirt-v2v-conversion
+subjects:
+  - kind: ServiceAccount
+    name: kubevirt-v2v-conversion
+roleRef:
+  kind: Role
+  name: kubevirt-v2v-conversion
+  apiGroup: rbac.authorization.k8s.io

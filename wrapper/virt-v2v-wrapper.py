@@ -21,6 +21,7 @@ import atexit
 from contextlib import contextmanager
 import copy
 import errno
+from io import BytesIO
 import json
 import logging
 import os
@@ -44,7 +45,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "17"
+VERSION = "18"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -75,6 +76,7 @@ DIRECT_BACKEND = True
 class BaseHost(object):
     TYPE_UNKNOWN = 'unknown'
     TYPE_OSP = 'osp'
+    TYPE_POD = 'pod'
     TYPE_VDSM = 'vdsm'
     TYPE = TYPE_UNKNOWN
 
@@ -89,6 +91,8 @@ class BaseHost(object):
             return BaseHost.TYPE_VDSM
         elif 'osp_environment' in data:
             return BaseHost.TYPE_OSP
+        elif not data['daemonize']:
+            return BaseHost.TYPE_POD
         else:
             return BaseHost.TYPE_UNKNOWN
 
@@ -98,6 +102,8 @@ class BaseHost(object):
             return OSPHost()
         if host_type == BaseHost.TYPE_VDSM:
             return VDSMHost()
+        if host_type == BaseHost.TYPE_POD:
+            return CNVHost()
         else:
             raise ValueError("Cannot build host of type: %r" % host_type)
 
@@ -138,10 +144,131 @@ class BaseHost(object):
         """ Tell under which group to run virt-v2v """
         return os.getegid()
 
+    def update_progress(self):
+        """ Called to do tasks on progress update """
+        pass
+
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
         hard_error("Cannot validate data for uknown host type")
 #
+#  }}}
+#
+############################################################################
+#
+#  Kubevirt {{{
+#
+
+
+class CNVHost(BaseHost):
+    TYPE = BaseHost.TYPE_VDSM
+
+    def __init__(self):
+        super(CNVHost, self).__init__()
+        self._k8s = K8SCommunicator()
+        self._tag = '123'
+
+    def create_runner(self, *args, **kwargs):
+        return SubprocessRunner(self, *args, **kwargs)
+
+    def getLogs(self):
+        # TODO: we should either pipe everything to stdout or push to log
+        # collector
+        return ('/tmp', '/tmp')
+
+    def handle_cleanup(self, data, state):
+        """ Handle cleanup after failed conversion """
+        # TODO: do we need to clean the PVCs?
+        pass
+
+    def handle_finish(self, data, state):
+        """ Handle finish after successfull conversion """
+        # TODO: update VM definition
+        return True
+
+    def check_install_drivers(self, data):
+        # Nothing to do for Kubevirt
+        pass
+
+    def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
+        """ Prepare virt-v2v command parts that are method dependent """
+        v2v_args.extend([
+            '-o', 'json',
+            '-os', '/data/vm',
+            '-oo', 'json-disks-pattern=disk%{DiskNo}/disk.img',
+            ])
+        return v2v_args, v2v_env
+
+    def update_progress(self):
+        """ Called to do tasks on progress update """
+        # Update POD annotation with progress
+        # Just an average now, maybe later we can weight it by disk size
+        state = State().instance
+        disks = [d['progress'] for d in state['disks']]
+        if len(disks) > 0:
+            progress = sum(disks)/len(disks)
+        else:
+            progress = 0
+        body = json.dumps([{
+            "op": "add",
+            "path": "/metadata/annotations/v2vConversionProgress",
+            "value": str(progress)
+            }])
+        logging.debug('Updating progress in POD annotation')
+        self._k8s.patch(body)
+
+    def validate_data(self, data):
+        """ Validate input data, fill in defaults, etc """
+        # No libvirt inside the POD, enforce direct backend
+        data['backend'] = 'direct'
+        return data
+
+
+class K8SCommunicator(object):
+
+    def __init__(self):
+        self._host = os.environ['KUBERNETES_SERVICE_HOST']
+        self._port = os.environ['KUBERNETES_SERVICE_PORT']
+        self._pod = os.environ['HOSTNAME']
+
+        account_dir = '/var/run/secrets/kubernetes.io/serviceaccount'
+        self._cert = os.path.join(account_dir, 'ca.crt')
+        with open(os.path.join(account_dir, 'namespace')) as f:
+            self._ns = f.read()
+        with open(os.path.join(account_dir, 'token')) as f:
+            self._token = f.read()
+
+        self._url = (
+            'https://{host}:%{port}'
+            '/api/v1/namespaces/{ns}/pods/{pod}').format(
+                host=self._host,
+                port=self._port,
+                ns=self._ns,
+                pod=self._pod)
+        self._headers = [
+            'Authorization: Bearer {}'.format(self._token),
+            'Accept: application/json',
+        ]
+
+    def patch(self, body):
+        data = BytesIO(body.encode('utf-8'))
+        response = BytesIO()
+        c = pycurl.Curl()
+        # c.setopt(pycurl.VERBOSE, 1)
+        c.setopt(pycurl.URL, self._url)
+        c.setopt(pycurl.UPLOAD, 1)
+        c.setopt(pycurl.CUSTOMREQUEST, 'PATCH')
+        c.setopt(pycurl.HTTPHEADER, self._headers +
+                 ['Content-Type: application/json-patch+json'])
+        c.setopt(pycurl.CAINFO, self._cert)
+        c.setopt(pycurl.READFUNCTION, data.read)
+        c.setopt(pycurl.WRITEFUNCTION, response.write)
+        c.perform()
+        ret = c.getinfo(c.RESPONSE_CODE)
+        logging.debug('HTTP response code %d', ret)
+        if ret >= 300:
+            logging.debug('response output: %s', response.getvalue())
+        c.close()
 #  }}}
 #
 ############################################################################
@@ -958,11 +1085,11 @@ class OutputParser(object):  # {{{
         self._current_path = None
 
     def parse(self, state):
-        line = None
+        line = self._log.readline()
         while line != b'':
-            line = self._log.readline()
             logging.debug('%r', line)
             state = self.parse_line(state, line)
+            line = self._log.readline()
         return state
 
     def parse_line(self, state, line):
@@ -1662,6 +1789,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
             while runner.is_running():
                 state = parser.parse(state)
                 state.write()
+                host.update_progress()
                 throttling_update(runner)
                 time.sleep(5)
             logging.info(
@@ -1974,7 +2102,9 @@ def main():
                 logging.info('Staying in foreground as requested')
                 handler = logging.StreamHandler(sys.stdout)
                 handler.setLevel(logging.DEBUG)
-                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                # TODO: drop junk from virt-v2v log
+                formatter = logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
                 handler.setFormatter(formatter)
                 logging.getLogger().addHandler(handler)
             agent_pid = None
@@ -2034,9 +2164,10 @@ def main():
         raise
 
     logging.info('Finished')
+    if state['failed']:
+        sys.exit(2)
+
 
 # }}}
-
-
 if __name__ == '__main__':
     main()

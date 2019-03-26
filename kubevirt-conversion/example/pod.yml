@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubevirt-v2v-conversion
+spec:
+  serviceAccountName: kubevirt-v2v-conversion
+  containers:
+    - name: kubevirt-v2v-conversion
+      image: quay.io/nyoxi/kubevirt-conversion-pod:latest
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: configuration
+          mountPath: /data/input
+        - name: kvm
+          mountPath: /dev/kvm
+        - name: volume-vddk
+          mountPath: /opt/vmware-vix-disklib-distrib
+        - name: volume-temp
+          mountPath: /var/tmp
+        - name: volume1
+          mountPath: /data/vm/disk1
+        - name: volume2
+          mountPath: /data/vm/disk2
+
+  volumes:
+    - name: configuration
+      secret:
+        secretName: conversion-pod-input
+    - name: kvm
+      hostPath:
+        path: /dev/kvm
+    - name: volume-vddk
+      persistentVolumeClaim:
+        claimName: pvc-vddk
+    - name: volume-temp
+      persistentVolumeClaim:
+        claimName: pvc-temp
+    - name: volume1
+      persistentVolumeClaim:
+        claimName: pvc-volume1
+    - name: volume2
+      persistentVolumeClaim:
+        claimName: pvc-volume2
+
+  restartPolicy: Never

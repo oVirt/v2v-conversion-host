@@ -1,0 +1,38 @@
+---
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachine
+metadata:
+  name: converted-vm
+  labels:
+    kubevirt.io/vm: converted-vm
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: converted-vm
+    spec:
+      terminationGracePeriodSeconds: 0
+      domain:
+        cpu:
+          cores: 1
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 2Gi
+        devices:
+          disks:
+            - name: disk1
+              disk:
+                bus: virtio
+            - name: disk2
+              disk:
+                bus: virtio
+      volumes:
+        - name: disk1
+          persistentVolumeClaim:
+            claimName: pvc-volume1
+        - name: disk2
+          persistentVolumeClaim:
+            claimName: pvc-volume2

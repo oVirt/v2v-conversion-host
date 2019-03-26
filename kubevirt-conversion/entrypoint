@@ -1,0 +1,25 @@
+#!/bin/sh -e
+
+# This is documented here:
+# https://docs.openshift.com/container-platform/3.11/creating_images/guidelines.html#openshift-specific-guidelines
+if ! whoami &>/dev/null; then
+  if [ -w /etc/passwd ]; then
+    echo "${USER_NAME:-kubevirt-vmware}:x:$(id -u):$(id -g):${USER_NAME:-kubevirt-vmware} user:${HOME}:/sbin/nologin" >> /etc/passwd
+  fi
+fi
+#####
+
+set -x
+VDDK="/opt/vmware-vix-disklib-distrib"
+ls -l "/usr/lib64/nbdkit/plugins/nbdkit-vddk-plugin.so"
+ls -ld "$VDDK"
+lib="$(find "$VDDK" -name libvixDiskLib.so.6)"
+LD_LIBRARY_PATH="$(dirname "$lib")" nbdkit --dump-plugin vddk
+LIBGUESTFS_BACKEND='direct' libguestfs-test-tool
+set +x
+
+echo
+echo "...  OK  ..."
+echo
+
+exec /usr/local/bin/virt-v2v-wrapper $@ < /data/input/conversion.json

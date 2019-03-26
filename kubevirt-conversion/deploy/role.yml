@@ -1,0 +1,16 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: kubevirt-v2v-conversion
+rules:
+  - apiGroups:
+      - ""
+    resources: ["pods"]
+    verbs: ["patch"]
+  - apiGroups:
+      - security.openshift.io
+    resources: ["securitycontextconstraints"]
+    # TODO: limit this
+    verbs: ["*"]
