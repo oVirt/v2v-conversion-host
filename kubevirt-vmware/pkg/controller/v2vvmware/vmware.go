@@ -39,7 +39,7 @@ func GetVMs(c *Client) ([]string, error) {
 }
 
 func GetVM(c *Client, vmName string) (*kubevirtv1alpha1.VmwareVmDetail, error) {
-	vm, err := c.GetVM(vmName)
+	vm, hostPath, err := c.GetVM(vmName)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("GetVM: failed to get details of VMWare VM '%s'", vmName))
 		return nil, err
@@ -48,7 +48,9 @@ func GetVM(c *Client, vmName string) (*kubevirtv1alpha1.VmwareVmDetail, error) {
 	raw, _ := json.Marshal(vm)
 	vmDetail := kubevirtv1alpha1.VmwareVmDetail {
 		Raw: string(raw), // TODO: pick what's needed
+		HostPath: hostPath,
 	}
+	log.Info(fmt.Sprintf("Fetched VM: %s, host: %s, data: %s", vmName, hostPath, vmDetail.Raw))
 
 	return &vmDetail, nil
 }

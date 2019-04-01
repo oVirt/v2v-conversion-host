@@ -9,10 +9,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/object"
 	"net/url"
 )
 
@@ -49,16 +51,17 @@ func (c *Client) GetVMs() ([]mo.VirtualMachine, error) {
 	return vms, nil
 }
 
-func (c *Client) GetVM(name string) (mo.VirtualMachine, error) {
+func (c *Client) GetVM(name string) (mo.VirtualMachine, string, error) {
 	client := c.Client
 
 	m := view.NewManager(client.Client)
 
 	var vm mo.VirtualMachine
+	var hostPath string
 
 	v, err := m.CreateContainerView(c.ctx, client.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
 	if err != nil {
-		return vm, err
+		return vm, hostPath, err
 	}
 
 	defer v.Destroy(c.ctx)
@@ -66,10 +69,17 @@ func (c *Client) GetVM(name string) (mo.VirtualMachine, error) {
 	// Reference: http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.VirtualMachine.html
 	err = v.RetrieveWithFilter(c.ctx, []string{"VirtualMachine"}, []string{"config", "summary"}, &vm, property.Filter{"summary.config.name": name})
 	if err != nil {
-		return vm, err
+		return vm, hostPath, err
 	}
 
-	return vm, nil
+	f := find.NewFinder(client.Client, true)
+	host, err := f.ObjectReference(c.ctx, *vm.Summary.Runtime.Host)
+	if err != nil {
+		return vm, hostPath, err
+	}
+	hostPath = host.(*object.HostSystem).Common.InventoryPath
+
+	return vm, hostPath, nil
 }
 
 func (c *Client) Logout() error {

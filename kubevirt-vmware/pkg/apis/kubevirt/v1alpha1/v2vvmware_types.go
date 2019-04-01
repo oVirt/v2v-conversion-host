@@ -10,6 +10,7 @@ import (
 type VmwareVmDetail struct {
     // TODO: list required details
     Raw string `json:"raw,omitempty"`
+    HostPath string `json:"hostPath"`
 }
 
 type VmwareVm struct {
