@@ -1,0 +1,2 @@
+centos-ovirt42-testing-x86_64,https://cbs.centos.org/repos/virt7-ovirt-42-testing/x86_64/os/
+centos-ovirt43-testing,https://cbs.centos.org/repos/virt7-ovirt-43-testing/$basearch/os/
