@@ -1,2 +1,2 @@
 ---
-- include_tasks: "check-transport-vddk.yml"
+- include_tasks: "check-transport-{{ v2v_transport_method }}.yml"
