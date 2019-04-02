@@ -1,6 +1,12 @@
-#!/bin/bash
+#!/bin/bash -e
 
 RPM_VERSION="1.12.1"
+KUBEVIRT_CONVERSION_RELEASE=1
+KUBEVIRT_VMWARE_RELEASE=1
+
+QUAY_NS=quay.io/nyoxi
+
+
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
     RPM_RELEASE="1"
 else
@@ -49,6 +55,56 @@ do_install() {
   install -t "$AUX_DATA_DIR/playbooks" ansible/examples/*.yml
 
   echo "Installation done."
+}
+
+do_build_conversion() {
+    TAG="$RPM_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
+    IMAGE="$QUAY_NS/kubevirt-v2v-conversion"
+
+    # TODO: make sure the TAG is not used yet to avoid overwrite
+
+    pushd kubevirt-conversion
+    # TODO: use RPM with wrapper
+    cp ../wrapper/virt-v2v-wrapper.py .
+    chmod a+rx virt-v2v-wrapper.py
+    docker build -t "$IMAGE:$TAG" .
+    rm virt-v2v-wrapper.py
+    popd
+
+    # TODO: When to tag as 'latest'? Do it manualy for now.
+    #docker push quay.io/nyoxi/kubevirt-conversion:latest
+}
+
+do_build_vmware() {
+    TAG="$RPM_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
+    IMAGE="$QUAY_NS/kubevirt-vmware"
+
+    # Prepare golang environment
+    pushd kubevirt-vmware > /dev/null
+    export GOPATH="$(pwd)/build/GOPATH"
+    if [ -e "$GOPATH" ] ; then
+        echo "GOPATH exists ($GOPATH)" >&2
+        echo "Remove it and try again" >&2
+        exit 1
+    fi
+    IPATH="$GOPATH/src/github.com/ovirt/v2v-conversion-host/"
+    mkdir -p "$IPATH"
+    pushd $IPATH > /dev/null
+    ln -s $(dirs +2)/kubevirt-vmware
+    cd kubevirt-vmware
+
+    # Build operator
+    operator-sdk build "$IMAGE:$TAG"
+
+    # Drop out and clean
+    popd > /dev/null # $IPATH/kubevirt-vmware
+    popd > /dev/null # /kubevirt-vmware
+    rm -frv "$GOPATH"
+}
+
+do_images() {
+    do_build_conversion
+    do_build_vmware
 }
 
 do_$1
