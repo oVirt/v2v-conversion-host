@@ -15,6 +15,7 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/object"
+	"net/http"
 	"net/url"
 )
 
@@ -29,14 +30,27 @@ type LoginCredentials struct {
 	password string
 }
 
-func (c *Client) GetVMs() ([]mo.VirtualMachine, error) {
+func (c *Client) GetVMs() ([]mo.VirtualMachine, string, error) {
+	var thumbprint string
+
 	client := c.Client
 
+	// Get thumbprint
+	var info object.HostCertificateInfo
+	url := client.Client.URL()
+	transport := client.Client.Transport.(*http.Transport)
+	err := info.FromURL(url, transport.TLSClientConfig)
+	if err != nil {
+		return nil, thumbprint, err
+	}
+	thumbprint = info.ThumbprintSHA1
+
+	// List VMs
 	m := view.NewManager(client.Client)
 
 	v, err := m.CreateContainerView(c.ctx, client.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
 	if err != nil {
-		return nil, err
+		return nil, thumbprint, err
 	}
 
 	defer v.Destroy(c.ctx)
@@ -45,10 +59,10 @@ func (c *Client) GetVMs() ([]mo.VirtualMachine, error) {
 	var vms []mo.VirtualMachine
 	err = v.Retrieve(c.ctx, []string{"VirtualMachine"}, []string{"summary"}, &vms)
 	if err != nil {
-		return nil, err
+		return nil, thumbprint, err
 	}
 
-	return vms, nil
+	return vms, thumbprint, nil
 }
 
 func (c *Client) GetVM(name string) (mo.VirtualMachine, string, error) {

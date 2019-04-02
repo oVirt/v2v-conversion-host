@@ -50,13 +50,13 @@ func readVmsList(r *ReconcileV2VVmware, request reconcile.Request, connectionSec
 	defer client.Logout()
 
 	updateStatusPhase(r, request, PhaseLoadingVmsList)
-	vmwareVms, err := GetVMs(client)
+	vmwareVms, thumbprint, err := GetVMs(client)
 	if err != nil {
 		updateStatusPhase(r, request, PhaseLoadingVmsListFailed)
 		return err
 	}
 
-	err = updateVmsList(r, request, vmwareVms, utils.MaxRetryCount)
+	err = updateVmsList(r, request, thumbprint, vmwareVms, utils.MaxRetryCount)
 	if err != nil {
 		updateStatusPhase(r, request, PhaseLoadingVmsListFailed)
 		return err
@@ -66,14 +66,14 @@ func readVmsList(r *ReconcileV2VVmware, request reconcile.Request, connectionSec
 	return nil
 }
 
-func updateVmsList(r *ReconcileV2VVmware, request reconcile.Request, vmwareVms []string, retryCount int) error {
+func updateVmsList(r *ReconcileV2VVmware, request reconcile.Request, thumbprint string, vmwareVms []string, retryCount int) error {
 	instance := &kubevirtv1alpha1.V2VVmware{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to get V2VVmware object to update list of VMs, intended to write: '%s'", vmwareVms))
 		if retryCount > 0 {
 			utils.SleepBeforeRetry()
-			return updateVmsList(r, request, vmwareVms, retryCount - 1)
+			return updateVmsList(r, request, thumbprint, vmwareVms, retryCount - 1)
 		}
 		return err
 	}
@@ -85,13 +85,14 @@ func updateVmsList(r *ReconcileV2VVmware, request reconcile.Request, vmwareVms [
 			DetailRequest: false, // can be omitted, but just to be clear
 		}
 	}
+	instance.Spec.Thumbprint = thumbprint
 
 	err = r.client.Update(context.TODO(), instance)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("Failed to update V2VVmware object with list of VMWare VMs, intended to write: '%s'", vmwareVms))
 		if retryCount > 0 {
 			utils.SleepBeforeRetry()
-			return updateVmsList(r, request, vmwareVms, retryCount - 1)
+			return updateVmsList(r, request, thumbprint, vmwareVms, retryCount - 1)
 		}
 		return err
 	}

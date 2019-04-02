@@ -22,11 +22,11 @@ func getClient(ctx context.Context, loginCredentials *LoginCredentials) (*Client
 	return c, nil
 }
 
-func GetVMs(c *Client) ([]string, error) {
-	vms, err := c.GetVMs()
+func GetVMs(c *Client) ([]string, string, error) {
+	vms, thumbprint, err := c.GetVMs()
 	if err != nil {
 		log.Error(err, "GetVMs: failed to get list of VMs from VMWare.")
-		return nil, err
+		return nil, thumbprint, err
 	}
 
 	names := make([]string, len(vms))
@@ -34,8 +34,8 @@ func GetVMs(c *Client) ([]string, error) {
 		names[i] = vm.Summary.Config.Name
 	}
 
-	log.Info(fmt.Sprintf("GetVMs: retrieved list of virtual machines: %s", names))
-	return names, nil
+	log.Info(fmt.Sprintf("GetVMs: thumbprint=%s; VMs: %s", thumbprint, names))
+	return names, thumbprint, nil
 }
 
 func GetVM(c *Client, vmName string) (*kubevirtv1alpha1.VmwareVmDetail, error) {

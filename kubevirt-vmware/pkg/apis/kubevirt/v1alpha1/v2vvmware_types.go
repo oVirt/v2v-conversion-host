@@ -25,6 +25,7 @@ type V2VVmwareSpec struct {
     Connection string `json:"connection,omitempty"` // name of Secret wit vmware connection details
     TimeToLive string `json:"timeToLive,omitempty"` // for custom garbage collector
     Vms []VmwareVm `json:"vms,omitempty"`
+    Thumbprint string `json:"thumbprint,omitempty"`
 }
 
 // V2VVmwareStatus defines the observed state of V2VVmware
