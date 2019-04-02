@@ -29,10 +29,10 @@ install:
 script:
   # Run sytax checks and linters
   - tox
-  - cd kubevirt-provider/ && docker build -t v2v-conversion-host .
-  - docker run --detach --publish 8080:8080 v2v-conversion-host
-  - curl -v http://localhost:8080/healthcheck
-  - docker kill $(docker ps --quiet --latest)
+  #- cd kubevirt-provider/ && docker build -t v2v-conversion-host .
+  #- docker run --detach --publish 8080:8080 v2v-conversion-host
+  #- curl -v http://localhost:8080/healthcheck
+  #- docker kill $(docker ps --quiet --latest)
 
 # Galaxy cannot handle the fact that role is in subdirectory
 # notifications:
