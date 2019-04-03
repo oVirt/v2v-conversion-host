@@ -209,13 +209,33 @@ class CNVHost(BaseHost):
             progress = sum(disks)/len(disks)
         else:
             progress = 0
-        body = json.dumps([{
+
+        # First make sure /metada/annotations exists then set progress
+        patch = []
+        pod = json.loads(self._k8s.get())
+        if 'metadata' not in pod:
+            patch.append({
+                    "op": "add",
+                    "path": "/metadata",
+                    "value": {},
+                    })
+            pod['metadata'] = {}
+            logging.debug('Creating /metadata in POD description')
+        if 'annotations' not in pod['metadata']:
+            patch.append({
+                    "op": "add",
+                    "path": "/metadata/annotations",
+                    "value": {},
+                    })
+            pod['metadata']['annotations'] = {}
+            logging.debug('Creating /metadata/annotations in POD description')
+        patch.append({
             "op": "add",
             "path": "/metadata/annotations/v2vConversionProgress",
             "value": str(progress)
-            }])
+            })
         logging.debug('Updating progress in POD annotation')
-        self._k8s.patch(body)
+        self._k8s.patch(json.dumps(patch))
 
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
@@ -249,6 +269,22 @@ class K8SCommunicator(object):
             'Authorization: Bearer {}'.format(self._token),
             'Accept: application/json',
         ]
+
+    def get(self):
+        response = BytesIO()
+        c = pycurl.Curl()
+        # c.setopt(pycurl.VERBOSE, 1)
+        c.setopt(pycurl.URL, self._url)
+        c.setopt(pycurl.HTTPHEADER, self._headers)
+        c.setopt(pycurl.CAINFO, self._cert)
+        c.setopt(pycurl.WRITEFUNCTION, response.write)
+        c.perform()
+        ret = c.getinfo(c.RESPONSE_CODE)
+        logging.debug('HTTP response code %d', ret)
+        if ret >= 300:
+            logging.debug('response output: %s', response.getvalue())
+        c.close()
+        return response.getvalue()
 
     def patch(self, body):
         data = BytesIO(body.encode('utf-8'))
