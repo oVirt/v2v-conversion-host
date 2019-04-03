@@ -7,7 +7,7 @@ spec:
   serviceAccountName: kubevirt-v2v-conversion
   containers:
     - name: kubevirt-v2v-conversion
-      image: quay.io/nyoxi/kubevirt-conversion-pod:latest
+      image: quay.io/nyoxi/kubevirt-v2v-conversion:1.12.1-1
       securityContext:
         privileged: true
       volumeMounts:
