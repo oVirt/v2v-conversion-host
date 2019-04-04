@@ -176,14 +176,17 @@ class CNVHost(BaseHost):
         # collector
         return ('/tmp', '/tmp')
 
-    def handle_cleanup(self, data, state):
-        """ Handle cleanup after failed conversion """
-        # TODO: do we need to clean the PVCs?
-        pass
-
     def handle_finish(self, data, state):
         """ Handle finish after successfull conversion """
-        # TODO: update VM definition
+        # Store JSON into annotation
+        with open('/data/vm/{}.json'.format(data['vm_name'])) as f:
+            vm_data = f.read().decode('utf-8')
+        patch = [{
+                "op": "add",
+                "path": "/metadata/annotations/v2vConversionMetadata",
+                "value": vm_data,
+                }]
+        self._k8s.patch(json.dumps(patch))
         return True
 
     def check_install_drivers(self, data):
