@@ -1110,7 +1110,7 @@ class OutputParser(object):  # {{{
         br' \'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
     SSH_VMX_GUEST_NAME = re.compile(br'^displayName = "(.*)"$')
 
-    def __init__(self, v2v_log):
+    def __init__(self, v2v_log, duplicate=False):
         # Wait for the log file to appear
         for i in range(10):
             if os.path.exists(v2v_log):
@@ -1119,11 +1119,13 @@ class OutputParser(object):  # {{{
         self._log = open(v2v_log, 'rbU')
         self._current_disk = None
         self._current_path = None
+        self._duplicate = duplicate
 
     def parse(self, state):
         line = self._log.readline()
         while line != b'':
-            logging.debug('%r', line)
+            if self._duplicate:
+                logging.debug('%r', line)
             state = self.parse_line(state, line)
             line = self._log.readline()
         return state
@@ -1654,10 +1656,10 @@ class TcController(object):
 
 
 @contextmanager
-def log_parser(v2v_log):
+def log_parser(v2v_log, duplicate=False):
     parser = None
     try:
-        parser = OutputParser(v2v_log)
+        parser = OutputParser(v2v_log, duplicate)
         yield parser
     finally:
         if parser is not None:
@@ -1821,7 +1823,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     try:
         state['started'] = True
         state.write()
-        with log_parser(v2v_log) as parser:
+        with log_parser(v2v_log, not data['daemonize']) as parser:
             while runner.is_running():
                 state = parser.parse(state)
                 state.write()
