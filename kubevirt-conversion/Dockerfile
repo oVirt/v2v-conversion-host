@@ -19,8 +19,20 @@ RUN yum -y install \
         virtio-win \
     && \
     yum clean all
-# TODO: pre-build appliance
-#LIBGUESTFS_BACKEND=direct libguestfs-test-tool
+
+# The container image cannot handle sparse file properly. Keep --size to the
+# required minimum.
+RUN /usr/bin/supermin5 \
+        --build \
+        --verbose \
+        --copy-kernel \
+        --format ext2 \
+        --size 300M \
+        --host-cpu x86_64 \
+        /usr/lib64/guestfs/supermin.d \
+        -o /usr/lib64/guestfs/ && \
+    touch /usr/lib64/guestfs/README.fixed && \
+    LIBGUESTFS_BACKEND=direct libguestfs-test-tool
 
 RUN install --mode=0775 --group=0 -d /data && \
     install --mode=0775 --group=0 -d /data/input && \
