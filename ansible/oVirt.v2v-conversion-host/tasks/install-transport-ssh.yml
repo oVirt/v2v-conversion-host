@@ -34,7 +34,7 @@
         owner: "{{ ssh_config_owner }}"
         group: "{{ ssh_config_group }}"
         mode: 0700
-        state: present
+        state: directory
 
     - name: Create the SSH private key file
       copy:
