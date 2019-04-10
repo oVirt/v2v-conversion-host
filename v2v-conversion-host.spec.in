@@ -89,6 +89,8 @@ mkdir -p %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks
 ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_check.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
 ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_disable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
 ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_enable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
+# Create symlink for backward compatibility with CFME
+ln -s %{_bindir}virt-v2v-wrapper %{buildroot}/usr/bin/virt-v2v-wrapper.py
 
 %files ansible
 %{_datadir}/%{ansible_roles_dir}/
@@ -111,20 +113,11 @@ ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_enable.yml %{buildro
 %doc docs/
 %license LICENSE
 
-%post wrapper
-if [ -f /usr/bin/virt-v2v-wrapper.py ] ; then
+%pre wrapper
+# Previously wrapper was installed from role. Remove this rogue file
+# if this is first time we install the RPM.
+if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
     set -e
-    # Previously wrapper was installed from role. Remove this rogue file
-    # and replace it with symbolic link.
-    rm -fv /usr/bin/virt-v2v-wrapper.py
-    ln -s /usr/bin/virt-v2v-wrapper.py /usr/bin/virt-v2v-wrapper
-fi
-
-%postun wrapper
-if [ $1 -eq 0 -a -h /usr/bin/virt-v2v-wrapper.py ] ; then
-    set -e
-    # Remove symbolic link created in %post. Note that we cannot restore the
-    # original script... but do we even want to?
     rm -fv /usr/bin/virt-v2v-wrapper.py
 fi
 
