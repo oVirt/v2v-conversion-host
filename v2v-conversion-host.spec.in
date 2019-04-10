@@ -90,7 +90,7 @@ ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_check.yml %{buildroo
 ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_disable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
 ln -s %{_datadir}/%{name}-ansible/playbooks/conversion_host_enable.yml %{buildroot}%{_datadir}/ovirt-ansible-v2v-conversion-host/playbooks/
 # Create symlink for backward compatibility with CFME
-ln -s %{_bindir}virt-v2v-wrapper %{buildroot}/usr/bin/virt-v2v-wrapper.py
+ln -s %{_bindir}/virt-v2v-wrapper %{buildroot}/usr/bin/virt-v2v-wrapper.py
 
 %files ansible
 %{_datadir}/%{ansible_roles_dir}/
