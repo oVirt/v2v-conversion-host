@@ -45,7 +45,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "18"
+VERSION = "18.1"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
@@ -757,6 +757,13 @@ class VDSMHost(BaseHost):
                 '-o', 'rhv',
                 '-os', data['export_domain'],
                 ])
+        if 'XDG_RUNTIME_DIR' in v2v_env and self.get_uid() != 0:
+            # Drop XDG_RUNTIME_DIR from environment. Otherwise it would "leak"
+            # throuh our su/sudo call and would cause permissions error for
+            # virt-v2v.
+            #
+            # https://bugzilla.redhat.com/show_bug.cgi?id=967509
+            del v2v_env['XDG_RUNTIME_DIR']
 
         return v2v_args, v2v_env
 
