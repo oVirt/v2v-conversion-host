@@ -763,6 +763,7 @@ class VDSMHost(BaseHost):
             # virt-v2v.
             #
             # https://bugzilla.redhat.com/show_bug.cgi?id=967509
+            logging.info('Dropping XDG_RUNTIME_DIR from environment.')
             del v2v_env['XDG_RUNTIME_DIR']
 
         return v2v_args, v2v_env
