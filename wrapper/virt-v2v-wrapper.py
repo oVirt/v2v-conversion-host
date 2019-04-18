@@ -1117,7 +1117,7 @@ class OutputParser(object):  # {{{
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
     RHV_VM_ID = re.compile(
-        br'<VirtualSystem ovf:id=\'?P<uuid>[a-fA-F0-9-]*\'>')
+        br'<VirtualSystem ovf:id=\'(?P<uuid>[a-fA-F0-9-]*)\'>')
     OSP_VOLUME_ID = re.compile(
             br'openstack .*\'?volume\'? \'?show\'?.* '
             br'\'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
@@ -1248,6 +1248,7 @@ class OutputParser(object):  # {{{
                     'Volume \'%s\' is NOT at index %d', volume_id, index)
 
         # RHV VM UUID
+        m = self.RHV_VM_ID.search(line)
         if m is not None:
             vm_id = m.group('uuid').decode('utf-8')
             state['vm_id'] = vm_id
