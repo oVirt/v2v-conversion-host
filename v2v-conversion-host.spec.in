@@ -122,6 +122,18 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Thu Apr 18 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.13.0-1
+- Wrapper changes:
+  * fix VM ID lookup in RHV
+  * store VM ID in state (#23)
+  * drop XDG_RUNTIME_DIR from environment (RHBZ#1700461)
+  * make it possible to skip daemonizing
+- Role changes:
+  * fix creation of .ssh directory (RHBZ#1698548)
+  * fix check task to allow checking SSH transport method (#50)
+- improve Kubevirt conversion, and Kubevirt backend to wrapper
+- fix wrapper symlink for backward compatibility
+
 * Mon Mar 25 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.12.1-1
 - Wrapper changes:
   * bugfix: chown tasks file in net_cls cgroup
