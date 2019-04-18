@@ -450,6 +450,7 @@ class OSPHost(BaseHost):
         # Create instance
         os_command = [
             'server', 'create',
+            '--format', 'json',
             '--flavor', data['osp_flavor_id'],
             ]
         for grp in data['osp_security_groups_ids']:
@@ -464,10 +465,14 @@ class OSPHost(BaseHost):
             os_command.extend(['--nic', 'port-id=%s' % port])
         os_command.append(vm_name)
         # Let's get rolling...
-        if self._run_openstack(os_command, data, destination=True) is None:
+        vm = self._run_openstack(os_command, data, destination=True)
+        if vm is None:
             error('Create VM failed')
             return False
         else:
+            vm = json.loads(vm)
+            state['vm_id'] = str(vm.get('id'))
+            logging.info('Created OSP instance with id=%s', state['vm_id'])
             return True
 
     def check_install_drivers(self, data):
@@ -1111,6 +1116,8 @@ class OutputParser(object):  # {{{
         br'/vmfs/volumes/(?P<store>[^/]*)/(?P<vm>[^/]*)/'
         br'(?P<disk>.*?)(-flat)?\.vmdk$')
     RHV_DISK_UUID = re.compile(br'disk\.id = \'(?P<uuid>[a-fA-F0-9-]*)\'')
+    RHV_VM_ID = re.compile(
+        br'<VirtualSystem ovf:id=\'?P<uuid>[a-fA-F0-9-]*\'>')
     OSP_VOLUME_ID = re.compile(
             br'openstack .*\'?volume\'? \'?show\'?.* '
             br'\'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
@@ -1239,6 +1246,13 @@ class OutputParser(object):  # {{{
             if state['internal']['disk_ids'].get(index) != volume_id:
                 logging.debug(
                     'Volume \'%s\' is NOT at index %d', volume_id, index)
+
+        # RHV VM UUID
+        if m is not None:
+            vm_id = m.group('uuid').decode('utf-8')
+            state['vm_id'] = vm_id
+            logging.info('Created VM with id=%s', vm_id)
+
         return state
 
     def close(self):

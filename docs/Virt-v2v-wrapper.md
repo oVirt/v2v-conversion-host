@@ -210,6 +210,8 @@ When virt-v2v finishes the state is updated with the following keys:
   that the value should not be used to check if conversion succeeded or failed.
   (See below.)
 
+* `vm_id`: unique ID of the newly created VM. Available in OSP and RHV.
+
 Right before the wrapper terminates it updates the state with:
 
 * `finished`: with value `true`
