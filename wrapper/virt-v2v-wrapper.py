@@ -178,12 +178,12 @@ class CNVHost(BaseHost):
 
     def handle_finish(self, data, state):
         """ Handle finish after successfull conversion """
-        # Store JSON into labels
+        # Store JSON into annotation
         with open('/data/vm/{}.json'.format(data['vm_name'])) as f:
             vm_data = f.read().decode('utf-8')
         patch = [{
                 "op": "add",
-                "path": "/metadata/labels/v2vConversionMetadata",
+                "path": "/metadata/annotations/v2vConversionMetadata",
                 "value": vm_data,
                 }]
         self._k8s.patch(json.dumps(patch))
@@ -213,7 +213,7 @@ class CNVHost(BaseHost):
         else:
             progress = 0
 
-        # First make sure /metada/labels exists then set progress
+        # First make sure /metada/annotations exists then set progress
         patch = []
         pod = json.loads(self._k8s.get())
         if 'metadata' not in pod:
@@ -224,17 +224,17 @@ class CNVHost(BaseHost):
                     })
             pod['metadata'] = {}
             logging.debug('Creating /metadata in POD description')
-        if 'labels' not in pod['metadata']:
+        if 'annotations' not in pod['metadata']:
             patch.append({
                     "op": "add",
-                    "path": "/metadata/labels",
+                    "path": "/metadata/annotations",
                     "value": {},
                     })
-            pod['metadata']['labels'] = {}
-            logging.debug('Creating /metadata/labels in POD description')
+            pod['metadata']['annotations'] = {}
+            logging.debug('Creating /metadata/annotations in POD description')
         patch.append({
             "op": "add",
-            "path": "/metadata/labels/v2vConversionProgress",
+            "path": "/metadata/annotations/v2vConversionProgress",
             "value": str(progress)
             })
         logging.debug('Updating progress in POD annotation')
