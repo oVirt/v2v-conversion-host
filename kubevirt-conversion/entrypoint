@@ -13,6 +13,8 @@ set -x
 VDDK="/opt/vmware-vix-disklib-distrib"
 ls -l "/usr/lib64/nbdkit/plugins/nbdkit-vddk-plugin.so"
 ls -ld "$VDDK"
+# Use find to detect misplaced library. This does not allow for arbitrary
+# location, the path is hard-coded in wrapper.
 lib="$(find "$VDDK" -name libvixDiskLib.so.6)"
 LD_LIBRARY_PATH="$(dirname "$lib")" nbdkit --dump-plugin vddk
 LIBGUESTFS_BACKEND='direct' libguestfs-test-tool

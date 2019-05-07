@@ -36,8 +36,9 @@ RUN /usr/bin/supermin5 \
 
 RUN install --mode=0775 --group=0 -d /data && \
     install --mode=0775 --group=0 -d /data/input && \
+    install --mode=0775 --group=0 -d /data/vddklib && \
     install --mode=0775 --group=0 -d /data/vm && \
-    install --mode=0775 --group=0 -d /opt/vmware-vix-disklib-distrib && \
+    ln -s /data/vddklib/vmware-vix-disklib-distrib /opt/vmware-vix-disklib-distrib &&\
     true
 
 COPY entrypoint /usr/local/bin/entrypoint
