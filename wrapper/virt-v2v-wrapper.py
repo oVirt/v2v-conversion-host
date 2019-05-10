@@ -1421,7 +1421,7 @@ class SystemdRunner(BaseRunner):  # {{{
             time.sleep(5)
         if pid is None or pid == '':
             raise RuntimeError('Failed to get PID for virt-v2v process')
-            logging.info('Running with PID: %s', pid)
+        logging.info('Running with PID: %s', pid)
         try:
             self._pid = int(pid)
         except ValueError:
