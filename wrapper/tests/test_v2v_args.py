@@ -5,7 +5,7 @@ import virt_v2v_wrapper as wrapper
 class TestV2vArgs(unittest.TestCase):
     """ Bunch of trivial in-out tests """
 
-    def assertHasArgs(self, arg_list, expected, msg=None):
+    def assert_has_args(self, arg_list, expected, msg=None):
         if len(expected) == 0:
             return
         items = len(expected)
@@ -82,15 +82,15 @@ class TestV2vArgs(unittest.TestCase):
             },
         ]
         v2v_args, v2v_env = wrapper.prepare_command(data, ["mac-option"])
-        self.assertHasArgs(
+        self.assert_has_args(
             v2v_args,
             ['--bridge', 'src_net_1:dst_net_1'],
             'Looking for network 1 in %r' % v2v_args)
-        self.assertHasArgs(
+        self.assert_has_args(
             v2v_args,
             ['--bridge', 'src net 2:dst net 2'],
             'Looking for network 2 in %r' % v2v_args)
-        self.assertHasArgs(
+        self.assert_has_args(
             v2v_args,
             ['--mac', '01:23:45:67:89:AB:bridge:dst net 3'],
             'Looking for network 3 in %r' % v2v_args)

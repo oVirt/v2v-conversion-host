@@ -115,7 +115,7 @@ class BaseHost(object):
     def create_runner(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def getLogs(self):
+    def get_logs(self):
         return ('/tmp', '/tmp')
 
     def get_tag(self):
@@ -171,7 +171,7 @@ class CNVHost(BaseHost):
     def create_runner(self, *args, **kwargs):
         return SubprocessRunner(self, *args, **kwargs)
 
-    def getLogs(self):
+    def get_logs(self):
         # TODO: we should either pipe everything to stdout or push to log
         # collector
         return ('/tmp', '/tmp')
@@ -322,7 +322,7 @@ class OSPHost(BaseHost):
     def create_runner(self, *args, **kwargs):
         return SystemdRunner(self, *args, **kwargs)
 
-    def getLogs(self):
+    def get_logs(self):
         log_dir = '/var/log/virt-v2v'
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
@@ -651,7 +651,7 @@ class VDSMHost(BaseHost):
     def create_runner(self, *args, **kwargs):
         return SystemdRunner(self, *args, **kwargs)
 
-    def getLogs(self):
+    def get_logs(self):
         """ Returns tuple with directory for virt-v2v log and wrapper log """
         return (self.VDSM_LOG_DIR, self.VDSM_LOG_DIR)
 
@@ -2045,7 +2045,7 @@ def main():
     # The logging is delayed after we now which user runs the wrapper.
     # Otherwise we would have two logs.
     log_tag = host.get_tag()
-    log_dirs = host.getLogs()
+    log_dirs = host.get_logs()
     v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
