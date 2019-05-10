@@ -1883,29 +1883,39 @@ def write_password(password, password_files, uid, gid):
     return pfile[1]
 
 
-def spawn_ssh_agent(data):
+def spawn_ssh_agent(data, uid, gid):
+    cmd = [
+        'setpriv', '--reuid=%d' % uid, '--regid=%d' % gid, '--clear-groups',
+        'ssh-agent']
     try:
-        out = subprocess.check_output(['ssh-agent'])
-        logging.debug('ssh-agent: %s' % out)
-        sock = re.search(br'^SSH_AUTH_SOCK=([^;]+);', out, re.MULTILINE)
-        pid = re.search(br'^echo Agent pid ([0-9]+);', out, re.MULTILINE)
-        if not sock or not pid:
-            error(
-                'Incomplete match of ssh-agent output; sock=%r; pid=%r',
-                sock, pid)
-            return None, None
+        out = subprocess.check_output(
+            cmd,
+            stderr=subprocess.STDOUT,
+            stdin=DEVNULL)
+    except subprocess.CalledProcessError as e:
+        error('Failed to start ssh-agent', exception=True)
+        logging.error('Command failed with: %s', e.output)
+        return None, None
+    logging.debug('ssh-agent: %s' % out)
+    sock = re.search(br'^SSH_AUTH_SOCK=([^;]+);', out, re.MULTILINE)
+    pid = re.search(br'^echo Agent pid ([0-9]+);', out, re.MULTILINE)
+    if not sock or not pid:
+        error(
+            'Incomplete match of ssh-agent output; sock=%r; pid=%r',
+            sock, pid)
+        return None, None
+    try:
         agent_sock = sock.group(1)
         agent_pid = int(pid.group(1))
-        logging.info('SSH Agent started with PID %d', agent_pid)
-    except subprocess.CalledProcessError:
-        error('Failed to start ssh-agent', exception=True)
-        return None, None
     except ValueError:
         error('Failed to parse ssh-agent output', exception=True)
         return None, None
+    logging.info('SSH Agent started with PID %d', agent_pid)
     env = os.environ.copy()
     env['SSH_AUTH_SOCK'] = agent_sock
-    cmd = ['ssh-add']
+    cmd = [
+        'setpriv', '--reuid=%d' % uid, '--regid=%d' % gid, '--clear-groups',
+        'ssh-add']
     if 'ssh_key_file' in data:
         logging.info('Using custom SSH key')
         cmd.append(data['ssh_key_file'])
@@ -2174,7 +2184,8 @@ def main():
             agent_pid = None
             agent_sock = None
             if data['transport_method'] == 'ssh':
-                agent_pid, agent_sock = spawn_ssh_agent(data)
+                agent_pid, agent_sock = spawn_ssh_agent(
+                    data, host.get_uid(), host.get_gid())
                 if agent_pid is None:
                     raise RuntimeError('Failed to start ssh-agent')
             wrapper(host, data, state, v2v_log, virt_v2v_caps, agent_sock)
