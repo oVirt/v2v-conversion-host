@@ -122,6 +122,12 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Mon May 13 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.13.1-1
+- Wrapper changes:
+  * run ssh-agent under same user as virt-v2v (RHBZ#1707983)
+- Kubevirt changes:
+  * expect VDDK on different mount point to simplify deployment
+
 * Thu Apr 18 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.13.0-1
 - Wrapper changes:
   * fix VM ID lookup in RHV
