@@ -10,7 +10,7 @@ fi
 #####
 
 set -x
-VDDK="/opt/vmware-vix-disklib-distrib"
+VDDK="/opt/vmware-vix-disklib-distrib/"
 ls -l "/usr/lib64/nbdkit/plugins/nbdkit-vddk-plugin.so"
 ls -ld "$VDDK"
 # Use find to detect misplaced library. This does not allow for arbitrary
