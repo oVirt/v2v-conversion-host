@@ -1,10 +1,11 @@
 #!/bin/bash -e
 
 RPM_VERSION="1.13.1"
-KUBEVIRT_CONVERSION_RELEASE="1"
-KUBEVIRT_VMWARE_RELEASE="1"
+KUBEVIRT_VERSION="2.0.0"
+KUBEVIRT_CONVERSION_RELEASE="2"
+KUBEVIRT_VMWARE_RELEASE="2"
 
-QUAY_NS=quay.io/nyoxi
+QUAY_NS=quay.io/kubevirt
 
 
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
@@ -58,7 +59,7 @@ do_install() {
 }
 
 do_build_conversion() {
-    TAG="$RPM_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
+    TAG="v$KUBEVIRT_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
     IMAGE="$QUAY_NS/kubevirt-v2v-conversion"
 
     # TODO: make sure the TAG is not used yet to avoid overwrite
@@ -76,7 +77,7 @@ do_build_conversion() {
 }
 
 do_build_vmware() {
-    TAG="$RPM_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
+    TAG="v$KUBEVIRT_VERSION-$KUBEVIRT_CONVERSION_RELEASE"
     IMAGE="$QUAY_NS/kubevirt-vmware"
 
     # Prepare golang environment
