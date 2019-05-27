@@ -970,6 +970,12 @@ class State(object):  # {{{
         def __getattr__(self, name):
             return getattr(self._state, name)
 
+        def __getitem__(self, key):
+            return self._state[key]
+
+        def __setitem__(self, key, value):
+            self._state[key] = value
+
         def __str__(self):
             return repr(self._state)
 
@@ -978,6 +984,9 @@ class State(object):  # {{{
 
         def set_filename(self, name):
             self._filename = name
+
+        # FIXME: property attributes (property()/@property) don't work properly
+        # filename = property(get_filename, set_filename)
 
         def write(self):
             state = self._state.copy()
