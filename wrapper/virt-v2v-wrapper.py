@@ -1416,7 +1416,7 @@ class SystemdRunner(BaseRunner):  # {{{
                 )
         run_output = proc.communicate()[0]
         logging.info('systemd-run returned: %s', run_output)
-        m = re.search(br'\b(run-[0-9]+\.service)\.', run_output)
+        m = re.search(br'\b(run-r?[0-9a-f]+\.service)', run_output)
         if m is None:
             raise RuntimeError(
                 'Failed to find service name in output',
