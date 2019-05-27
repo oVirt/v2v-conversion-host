@@ -7,6 +7,8 @@ rules:
 ignore: |
   .tox/
   **/context/.travis.yml
+  **/gengo/.travis.yml
   **/govmomi/.travis.yml
   **/govmomi/.goreleaser.yml
+  **/imdario/mergo/testdata/license.yml
   **/mux/.travis.yml
