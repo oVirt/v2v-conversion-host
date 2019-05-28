@@ -1450,7 +1450,7 @@ class SystemdRunner(BaseRunner):  # {{{
                 'Failed to get "%s" for virt-v2v service from systemd',
                 property_name)
             return None
-        m = re.match(br'^%s=(.*)$' % property_name, output)
+        m = re.match(br'^%s=(.*)$' % property_name.encode('utf-8'), output)
         if m is not None:
             return m.group(1)
         else:
@@ -1686,7 +1686,7 @@ class TcController(object):
             return None
         # Split into words by line
         output = output.splitlines()
-        output = list(map(str.split, output))
+        output = list(map(bytes.split, output))
         return output
 
 
@@ -1946,8 +1946,8 @@ def spawn_ssh_agent(data, uid, gid):
 
 def virt_v2v_capabilities():
     try:
-        return subprocess.check_output(['virt-v2v', u'--machine-readable']) \
-                         .split('\n')
+        out = subprocess.check_output(['virt-v2v', u'--machine-readable'])
+        return out.decode('utf-8').split('\n')
     except subprocess.CalledProcessError:
         logging.exception('Failed to start virt-v2v')
         return None
