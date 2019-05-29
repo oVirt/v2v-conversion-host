@@ -1,3 +1,15 @@
+%if 0%{?fedora} || 0%{?rhel} > 7
+%bcond_without python3
+%else
+%bcond_with python3
+%endif
+
+%if %{with python3}
+%global python %{__python3}
+%else
+%global python %{__python}
+%endif
+
 %global rolename v2v-conversion-host
 %global roleprefix oVirt.
 %global ansible_roles_dir ansible/roles
@@ -50,9 +62,16 @@ Ansible role to setup hosts as conversion host for ManageIQ
 
 %package wrapper
 Summary: Daemonizing wrapper for virt-v2v
-Requires: libcgroup-tools
-Requires: python >= 2.7
 BuildArch: noarch
+Requires: libcgroup-tools
+%if %{with python3}
+Requires: python3
+Requires: python3-pycurl
+%else
+Requires: python >= 2.7
+Requires: python-pycurl
+Requires: python-six
+%endif
 
 %description wrapper
 Daemonizing wrapper for virt-v2v.
@@ -80,6 +99,7 @@ Daemonizing wrapper for virt-v2v.
 %install
 export DATA_DIR=%{buildroot}%{_datadir}
 export BIN_DIR=%{buildroot}%{_bindir}
+export PYTHON=%{python}
 sh build.sh install
 #install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
 

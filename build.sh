@@ -51,6 +51,7 @@ do_install() {
 
   mkdir -p $BIN_DIR
   install --mode=0755 -T wrapper/virt-v2v-wrapper.py $BIN_DIR/virt-v2v-wrapper
+  sed -i "1s/python2\$/$PYTHON/" $BIN_DIR/virt-v2v-wrapper
 
   mkdir -p "$AUX_DATA_DIR/playbooks"
   install -t "$AUX_DATA_DIR/playbooks" ansible/examples/*.yml
