@@ -946,7 +946,12 @@ class VDSMHost(BaseHost):
 
 
 class State(object):  # {{{
-    """ State object (which is a dict inside) implemented as singleton """
+    """
+    State object (which is a dict inside) implemented as singleton
+
+    This is not just the contain of state file, but it contains all the
+    internal configuration.
+    """
     class __StateObject:
         def __init__(self):
             # For now keep content as dict. Idealy this should be changed
@@ -966,6 +971,7 @@ class State(object):  # {{{
                     }
                 }
             self.state_file = None
+            self.v2v_log = None
 
         def __getattr__(self, name):
             return getattr(self._state, name)
@@ -1137,13 +1143,14 @@ class OutputParser(object):  # {{{
         br' \'?(?P<uuid>[a-fA-F0-9-]*)\'?$')
     SSH_VMX_GUEST_NAME = re.compile(br'^displayName = "(.*)"$')
 
-    def __init__(self, v2v_log, duplicate=False):
+    def __init__(self, duplicate=False):
+        state = State().instance
         # Wait for the log file to appear
         for i in range(10):
-            if os.path.exists(v2v_log):
+            if os.path.exists(state.v2v_log):
                 continue
             time.sleep(1)
-        self._log = open(v2v_log, 'rbU')
+        self._log = open(state.v2v_log, 'rbU')
         self._current_disk = None
         self._current_path = None
         self._duplicate = duplicate
@@ -1691,10 +1698,10 @@ class TcController(object):
 
 
 @contextmanager
-def log_parser(v2v_log, duplicate=False):
+def log_parser(duplicate=False):
     parser = None
     try:
-        parser = OutputParser(v2v_log, duplicate)
+        parser = OutputParser(duplicate)
         yield parser
     finally:
         if parser is not None:
@@ -1834,8 +1841,9 @@ def throttling_update(runner, initial=None):
     logging.info('New throttling setup: %r', state['throttling'])
 
 
-def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
+def wrapper(host, data, v2v_caps, agent_sock=None):
 
+    state = State().instance
     v2v_args, v2v_env = prepare_command(data, v2v_caps, agent_sock)
     v2v_args, v2v_env = host.prepare_command(
         data, v2v_args, v2v_env, v2v_caps)
@@ -1843,7 +1851,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     logging.info('Starting virt-v2v:')
     log_command_safe(v2v_args, v2v_env)
 
-    runner = host.create_runner(v2v_args, v2v_env, v2v_log)
+    runner = host.create_runner(v2v_args, v2v_env, state.v2v_log)
     try:
         runner.run()
     except RuntimeError as e:
@@ -1858,7 +1866,7 @@ def wrapper(host, data, state, v2v_log, v2v_caps, agent_sock=None):
     try:
         state['started'] = True
         state.write()
-        with log_parser(v2v_log, not data['daemonize']) as parser:
+        with log_parser(not data['daemonize']) as parser:
             while runner.is_running():
                 state = parser.parse(state)
                 state.write()
@@ -2048,6 +2056,7 @@ def main():
     if 'daemonize' not in data:
         data['daemonize'] = True
 
+    state = State().instance
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
 
@@ -2055,10 +2064,9 @@ def main():
     # Otherwise we would have two logs.
     log_tag = host.get_tag()
     log_dirs = host.get_logs()
-    v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
+    state.v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
-    state = State().instance
     state.state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
     throttling_file = os.path.join(STATE_DIR,
                                    'v2v-import-%s.throttle' % log_tag)
@@ -2073,7 +2081,7 @@ def main():
 
     logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
-    logging.info('Will store virt-v2v log in: %s', v2v_log)
+    logging.info('Will store virt-v2v log in: %s', state.v2v_log)
     logging.info('Will store state file in: %s', state.state_file)
     logging.info('Will read throttling limits from: %s', throttling_file)
 
@@ -2170,7 +2178,7 @@ def main():
 
             # Send some useful info on stdout in JSON
             print(json.dumps({
-                'v2v_log': v2v_log,
+                'v2v_log': state.v2v_log,
                 'wrapper_log': wrapper_log,
                 'state_file': state.state_file,
                 'throttling_file': throttling_file,
@@ -2196,7 +2204,7 @@ def main():
                     data, host.get_uid(), host.get_gid())
                 if agent_pid is None:
                     raise RuntimeError('Failed to start ssh-agent')
-            wrapper(host, data, state, v2v_log, virt_v2v_caps, agent_sock)
+            wrapper(host, data, virt_v2v_caps, agent_sock)
             if agent_pid is not None:
                 os.kill(agent_pid, signal.SIGTERM)
             if not state.get('failed', False):
