@@ -1,3 +1,5 @@
+import json
+import tempfile
 import unittest
 import virt_v2v_wrapper as wrapper
 
@@ -21,10 +23,10 @@ class TestState(unittest.TestCase):
 
     # def test_property(self):
     #     state = wrapper.State().instance
-    #     self.assertEqual(state.filename, None)
+    #     self.assertEqual(state.state_file, None)
     #     value = '/some/path'
-    #     state.filename = value
-    #     self.assertEqual(state.filename, value)
+    #     state.state_file = value
+    #     self.assertEqual(state.state_file, value)
     #  FIXME: property attributes (property()/@property) don't work properly
     #  with the __StateObject
     #     self.assertEqual(state._filename, value)
@@ -43,10 +45,18 @@ class TestState(unittest.TestCase):
         self.assertEqual(state1[key], value)
         self.assertEqual(state2[key], value)
         # Property
-        state1.filename = None
-        state2.filename = None
-        self.assertEqual(state1.filename, None)
-        self.assertEqual(state2.filename, None)
+        state1.state_file = None
+        state2.state_file = None
+        self.assertEqual(state1.state_file, None)
+        self.assertEqual(state2.state_file, None)
         value = '/some/path'
-        state1.filename = value
-        self.assertEqual(state2.filename, value)
+        state1.state_file = value
+        self.assertEqual(state2.state_file, value)
+
+    def test_write(self):
+        state = wrapper.State().instance
+        self.assertEqual(state.state_file, None)
+        state.state_file = tempfile.mkstemp(prefix='vchtest')[1]
+        state.write()
+        with open(state.state_file, 'rb') as f:
+            json.loads(f.read())

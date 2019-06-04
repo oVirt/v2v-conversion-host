@@ -965,7 +965,7 @@ class State(object):  # {{{
                     'network': None,
                     }
                 }
-            self.filename = None
+            self.state_file = None
 
         def __getattr__(self, name):
             return getattr(self._state, name)
@@ -991,7 +991,7 @@ class State(object):  # {{{
         def write(self):
             state = self._state.copy()
             del state['internal']
-            with open(self.filename, 'w') as f:
+            with open(self.state_file, 'w') as f:
                 json.dump(state, f)
 
     instance = None
@@ -2059,7 +2059,7 @@ def main():
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
     state = State().instance
-    state.filename = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
+    state.state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
     throttling_file = os.path.join(STATE_DIR,
                                    'v2v-import-%s.throttle' % log_tag)
     state['internal']['throttling_file'] = throttling_file
@@ -2074,7 +2074,7 @@ def main():
     logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
     logging.info('Will store virt-v2v log in: %s', v2v_log)
-    logging.info('Will store state file in: %s', state.filename)
+    logging.info('Will store state file in: %s', state.state_file)
     logging.info('Will read throttling limits from: %s', throttling_file)
 
     password_files = []
@@ -2172,7 +2172,7 @@ def main():
             print(json.dumps({
                 'v2v_log': v2v_log,
                 'wrapper_log': wrapper_log,
-                'state_file': state.filename,
+                'state_file': state.state_file,
                 'throttling_file': throttling_file,
             }))
 
