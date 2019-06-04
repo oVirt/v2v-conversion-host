@@ -965,7 +965,7 @@ class State(object):  # {{{
                     'network': None,
                     }
                 }
-            self._filename = None
+            self.filename = None
 
         def __getattr__(self, name):
             return getattr(self._state, name)
@@ -979,11 +979,11 @@ class State(object):  # {{{
         def __str__(self):
             return repr(self._state)
 
-        def get_filename(self):
-            return self._filename
+        # def get_filename(self):
+        #     return self._filename
 
-        def set_filename(self, name):
-            self._filename = name
+        # def set_filename(self, name):
+        #     self._filename = name
 
         # FIXME: property attributes (property()/@property) don't work properly
         # filename = property(get_filename, set_filename)
@@ -991,7 +991,7 @@ class State(object):  # {{{
         def write(self):
             state = self._state.copy()
             del state['internal']
-            with open(self._filename, 'w') as f:
+            with open(self.filename, 'w') as f:
                 json.dump(state, f)
 
     instance = None
@@ -2059,8 +2059,7 @@ def main():
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
     state = State().instance
-    state.set_filename(
-        os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag))
+    state.filename = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
     throttling_file = os.path.join(STATE_DIR,
                                    'v2v-import-%s.throttle' % log_tag)
     state['internal']['throttling_file'] = throttling_file
@@ -2075,7 +2074,7 @@ def main():
     logging.info('Wrapper version %s, uid=%d', VERSION, os.getuid())
 
     logging.info('Will store virt-v2v log in: %s', v2v_log)
-    logging.info('Will store state file in: %s', state.get_filename())
+    logging.info('Will store state file in: %s', state.filename)
     logging.info('Will read throttling limits from: %s', throttling_file)
 
     password_files = []
@@ -2173,7 +2172,7 @@ def main():
             print(json.dumps({
                 'v2v_log': v2v_log,
                 'wrapper_log': wrapper_log,
-                'state_file': state.get_filename(),
+                'state_file': state.filename,
                 'throttling_file': throttling_file,
             }))
 
