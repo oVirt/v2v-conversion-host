@@ -1048,7 +1048,8 @@ def error(short_message, *args, **kwargs):
     Used for error reporting, e.g.:
 
         error('Failed create port')
-        error('sock=%r; pid=%r', sock, pid)
+        error('Error starting ssh-agent',
+              'Incomplete match: sock=%r; pid=%r', sock, pid)
         error(e.args[0],
               'An error occured, finishing state file...',
               exception=True)
@@ -1936,6 +1937,7 @@ def spawn_ssh_agent(data, uid, gid):
     pid = re.search(br'^echo Agent pid ([0-9]+);', out, re.MULTILINE)
     if not sock or not pid:
         error(
+            'Error starting ssh-agent',
             'Incomplete match of ssh-agent output; sock=%r; pid=%r',
             sock, pid)
         return None, None
