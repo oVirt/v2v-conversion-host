@@ -4,6 +4,10 @@ import virt_v2v_wrapper as wrapper
 
 class TestOutputParser(unittest.TestCase):
 
+    def setUp(self):
+        # Destroy any previous state
+        wrapper.State.instance = None
+
     def test_disk_number(self):
         with wrapper.log_parser('/dev/null') as parser:
             parser._current_disk = 0

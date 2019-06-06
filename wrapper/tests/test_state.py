@@ -5,6 +5,10 @@ import virt_v2v_wrapper as wrapper
 class TestState(unittest.TestCase):
     """ Tests state object, make sure it it singleton """
 
+    def setUp(self):
+        # Destroy any previous state
+        wrapper.State.instance = None
+
     def test_dict(self):
         """ Make sure the access to internal dictionary works """
         state = wrapper.State().instance
