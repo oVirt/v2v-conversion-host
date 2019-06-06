@@ -738,6 +738,7 @@ class VDSMHost(BaseHost):
 
     def prepare_command(self, data, v2v_args, v2v_env, v2v_caps):
         v2v_args.extend([
+            '--bridge', 'ovirtmgmt',
             '-of', data['output_format'],
             ])
         if 'allocation' in data:
@@ -1730,7 +1731,6 @@ def prepare_command(data, v2v_caps, agent_sock=None):
     v2v_args = [
         '-v', '-x',
         data['vm_name'],
-        '--bridge', 'ovirtmgmt',
         '--root', 'first',
         '--machine-readable=file:{}'.format(state.machine_readable_log),
     ]
