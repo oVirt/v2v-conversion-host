@@ -11,6 +11,7 @@ class TestOutputParser(unittest.TestCase):
     def test_disk_number(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             parser._current_disk = 0
             parser._current_path = b'/path1'
@@ -29,6 +30,7 @@ class TestOutputParser(unittest.TestCase):
     def test_locate_disk(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             parser._current_disk = 0
             parser._current_path = b'[store1] path1.vmdk'
@@ -45,6 +47,7 @@ class TestOutputParser(unittest.TestCase):
     def test_progress(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             parser._current_disk = 0
             parser._current_path = b'/path1'
@@ -69,6 +72,7 @@ class TestOutputParser(unittest.TestCase):
     def test_rhv_disk_path_vddk(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             parser.parse_line(
                 state,
@@ -78,6 +82,7 @@ class TestOutputParser(unittest.TestCase):
     def test_rhv_disk_uuid(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             parser._current_disk = 0
             path = b'/path1'
@@ -93,6 +98,7 @@ class TestOutputParser(unittest.TestCase):
     def test_osp_volume_uuid(self):
         state = wrapper.State().instance
         state.v2v_log = '/dev/null'
+        state.machine_readable_log = '/dev/null'
         with wrapper.log_parser() as parser:
             lines = [
                     br"openstack '--os-username=admin' '--os-identity-api-version=3' '--os-user-domain-name=Default' '--os-auth-url=http://10.19.2.25:5000//v3' '--os-volume-api-version=3' '--os-project-domain-name=Default' '--os-project-name=admin' '--os-password=100Root-' 'volume' 'show' '-f' 'json' '77c51545-f2a4-4bbf-8f04-169a15c23354'",  # NOQA

@@ -49,11 +49,14 @@ class TestV2vArgs(unittest.TestCase):
     }
 
     def test_vddk_rhv_basic(self):
+        state = wrapper.State().instance
+        state.machine_readable_log = '/some/path'
         data = self.VDDK_RHV.copy()
         expected = [
             '-v', '-x', 'My Virtual',
             '--bridge', 'ovirtmgmt',
             '--root', 'first',
+            '--machine-readable=file:/some/path',
             '-i', 'libvirt',
             '-ic', 'esx://root@1.2.3.4?',
             '-it', 'vddk',

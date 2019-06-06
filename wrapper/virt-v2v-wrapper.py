@@ -972,6 +972,7 @@ class State(object):  # {{{
                 }
             self.state_file = None
             self.v2v_log = None
+            self.machine_readable_log = None
 
         def __getattr__(self, name):
             return getattr(self._state, name)
@@ -1145,17 +1146,32 @@ class OutputParser(object):  # {{{
 
     def __init__(self, duplicate=False):
         state = State().instance
-        # Wait for the log file to appear
+        # Wait for the log files to appear
         for i in range(10):
-            if os.path.exists(state.v2v_log):
+            if os.path.exists(state.v2v_log) \
+                    and os.path.exists(state.machine_readable_log):
                 continue
             time.sleep(1)
         self._log = open(state.v2v_log, 'rbU')
+        self._machine_log = open(state.machine_readable_log, 'rbU')
         self._current_disk = None
         self._current_path = None
         self._duplicate = duplicate
 
     def parse(self, state):
+        line = self._machine_log.readline()
+        while line != b'':
+            try:
+                message = json.loads(line)
+                if message.get('type') == 'error':
+                    message = message.get('message')
+                    error('virt-v2v error: {}'.format(message))
+            except json.decoder.JSONDecodeError:
+                logging.exception(
+                    'Failed to parse line from'
+                    ' virt-v2v machine readable output')
+                logging.error('Offending line: %r', line)
+            line = self._machine_log.readline()
         line = self._log.readline()
         while line != b'':
             if self._duplicate:
@@ -1709,11 +1725,13 @@ def log_parser(duplicate=False):
 
 
 def prepare_command(data, v2v_caps, agent_sock=None):
+    state = State().instance
     v2v_args = [
         '-v', '-x',
         data['vm_name'],
         '--bridge', 'ovirtmgmt',
-        '--root', 'first'
+        '--root', 'first',
+        '--machine-readable=file:{}'.format(state.machine_readable_log),
     ]
 
     if data['transport_method'] == 'vddk':
@@ -2065,6 +2083,8 @@ def main():
     log_tag = host.get_tag()
     log_dirs = host.get_logs()
     state.v2v_log = os.path.join(log_dirs[0], 'v2v-import-%s.log' % log_tag)
+    state.machine_readable_log = os.path.join(
+        log_dirs[0], 'v2v-import-%s-mr.log' % log_tag)
     wrapper_log = os.path.join(log_dirs[1],
                                'v2v-import-%s-wrapper.log' % log_tag)
     state.state_file = os.path.join(STATE_DIR, 'v2v-import-%s.state' % log_tag)
