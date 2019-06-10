@@ -48,13 +48,12 @@ class TestV2vArgs(unittest.TestCase):
         'insecure_connection': False,
     }
 
-    def test_vddk_rhv_basic(self):
+    def test_vddk_basic(self):
         state = wrapper.State().instance
         state.machine_readable_log = '/some/path'
         data = self.VDDK_RHV.copy()
         expected = [
             '-v', '-x', 'My Virtual',
-            '--bridge', 'ovirtmgmt',
             '--root', 'first',
             '--machine-readable=file:/some/path',
             '-i', 'libvirt',
