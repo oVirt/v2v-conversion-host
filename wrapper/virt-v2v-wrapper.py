@@ -1206,7 +1206,7 @@ class OutputParser(object):  # {{{
         # VDDK
         m = self.NBDKIT_DISK_PATH_RE.match(line)
         if m is not None:
-            self._current_path = m.group(1)
+            self._current_path = m.group(1).decode('utf-8')
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
@@ -1224,7 +1224,7 @@ class OutputParser(object):  # {{{
             path = m.group(1)
             # Transform path to be raltive to storage
             self._current_path = self.VMDK_PATH_RE.sub(
-                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path)
+                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path).decode('utf-8')
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
@@ -1235,7 +1235,7 @@ class OutputParser(object):  # {{{
             path = m.group(1)
             # Transform path to be raltive to storage
             self._current_path = self.VMDK_PATH_RE.sub(
-                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path)
+                br'[\g<store>] \g<vm>/\g<disk>.vmdk', path).decode('utf-8')
             if self._current_disk is not None:
                 logging.info('Copying path: %s', self._current_path)
                 self._locate_disk(state)
@@ -2187,11 +2187,8 @@ def main():
                 logging.debug('Initializing disk list from %r',
                               data['source_disks'])
                 for d in data['source_disks']:
-                    # NOTE: We expect names from virt-v2v/VMware to be UTF-8
-                    # encoded. Encoding them here is safer than decoding the
-                    # virt-v2v output.
                     state['disks'].append({
-                        'path': d.encode('utf-8'),
+                        'path': d,
                         'progress': 0})
                 logging.debug('Internal disk list: %r', state['disks'])
                 state['disk_count'] = len(data['source_disks'])
