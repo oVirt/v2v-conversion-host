@@ -6,5 +6,3 @@
 - include_tasks: "uninstall-provider-{{ v2v_host_type }}.yml"
 
 - include_tasks: "uninstall-transport-{{ v2v_transport_method }}.yml"
-
-- include_tasks: "uninstall-virt-v2v-wrapper.yml"

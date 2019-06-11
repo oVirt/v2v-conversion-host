@@ -1,7 +1,0 @@
----
-- name: Remove virt-v2v wrapper package
-  yum:
-    name: "v2v-conversion-host-wrapper"
-    state: absent
-  when:
-    - "v2v_host_type == 'rhevm'"
