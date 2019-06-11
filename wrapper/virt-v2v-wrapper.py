@@ -262,18 +262,21 @@ class K8SCommunicator(object):
             self._token = f.read()
 
         self._url = (
-            'https://{host}:%{port}'
+            'https://{host}:{port}'
             '/api/v1/namespaces/{ns}/pods/{pod}').format(
                 host=self._host,
                 port=self._port,
                 ns=self._ns,
                 pod=self._pod)
+        # too early for logging
+        #logging.info('Accessing Kubernetes on: %s', self._url)
         self._headers = [
             'Authorization: Bearer {}'.format(self._token),
             'Accept: application/json',
         ]
 
     def get(self):
+        logging.debug('Accessing Kubernetes on: %s', self._url)
         response = BytesIO()
         c = pycurl.Curl()
         # c.setopt(pycurl.VERBOSE, 1)
@@ -290,6 +293,7 @@ class K8SCommunicator(object):
         return response.getvalue()
 
     def patch(self, body):
+        logging.debug('Accessing Kubernetes on: %s', self._url)
         data = BytesIO(body.encode('utf-8'))
         response = BytesIO()
         c = pycurl.Curl()
