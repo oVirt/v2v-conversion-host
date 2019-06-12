@@ -269,7 +269,7 @@ class K8SCommunicator(object):
                 ns=self._ns,
                 pod=self._pod)
         # too early for logging
-        #logging.info('Accessing Kubernetes on: %s', self._url)
+        # logging.info('Accessing Kubernetes on: %s', self._url)
         self._headers = [
             'Authorization: Bearer {}'.format(self._token),
             'Accept: application/json',
