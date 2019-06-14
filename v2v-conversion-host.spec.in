@@ -142,6 +142,19 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Fri Jun 14 2019 Tomáš Golembiovský <tgolembi@redhat.com>
+- Ansible changes:
+  * ansible: don't remove wrapper package on oVirt hosts (RHBZ#1718829)
+- Wrapper changes:
+  * consume JSON machine readable output from virt-v2v
+  * remove ovirtmgmt bridge from non oVirt command lines
+  * various bugfixes around Python 3 support
+  * remove stray character from Kubernetes URL
+  * few other small bugfixes
+- Kubevirt changes:
+  * move to quay.io
+  * dereference VDDK directory in entrypoint to avoid issues with symlink
+
 * Mon May 13 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.13.1-1
 - Wrapper changes:
   * run ssh-agent under same user as virt-v2v (RHBZ#1707983)
