@@ -179,7 +179,7 @@ class CNVHost(BaseHost):
     def handle_finish(self, data, state):
         """ Handle finish after successfull conversion """
         # Store JSON into annotation
-        with open('/data/vm/{}.json'.format(data['vm_name'])) as f:
+        with open('/data/vm/{}.json'.format(data['vm_name']), 'b') as f:
             vm_data = f.read().decode('utf-8')
         patch = [{
                 "op": "add",
@@ -931,9 +931,9 @@ class VDSMHost(BaseHost):
         """
         try:
             logging.debug('_is_iso_domain check for %s', path)
-            with open(path, 'r') as f:
+            with open(path, 'r', 'b') as f:
                 for line in f:
-                    if line.rstrip() == 'CLASS=Iso':
+                    if line.rstrip() == b'CLASS=Iso':
                         return True
         except OSError:
             error('Failed to read domain metadata', exception=True)
