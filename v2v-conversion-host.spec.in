@@ -35,7 +35,7 @@ Url:            http://www.ovirt.org
 %description
 A set of tools to configure and use hosts (oVirt, OpenStack) for ManageIQ
 
-Project contsists of:
+Project consists of:
 - Ansible role to setup hosts as conversion host for ManageIQ
 - daemonizing wrapper for virt-v2v
 
@@ -65,6 +65,7 @@ Summary: Daemonizing wrapper for virt-v2v
 BuildArch: noarch
 Requires: libcgroup-tools
 %if %{with python3}
+BuildRequires: python3-devel
 Requires: python3
 Requires: python3-pycurl
 %else
