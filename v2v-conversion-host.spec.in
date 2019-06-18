@@ -143,7 +143,10 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
-* Fri Jun 14 2019 Tomáš Golembiovský <tgolembi@redhat.com>
+* Tue Jun 18 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.14.1-1
+- Fix packaging on Fedora
+
+* Fri Jun 14 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.14.0-1
 - Ansible changes:
   * ansible: don't remove wrapper package on oVirt hosts (RHBZ#1718829)
 - Wrapper changes:
