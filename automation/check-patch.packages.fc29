@@ -1,0 +1,6 @@
+yum-utils
+git
+ansible
+golang
+go-compilers-golang-compiler 
+python3-devel
