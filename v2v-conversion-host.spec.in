@@ -143,6 +143,10 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Tue Jun 25 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.14.2-1
+- Wrapper changes:
+  * fixes for Python 3 compatibility
+
 * Tue Jun 18 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.14.1-1
 - Fix packaging on Fedora
 
