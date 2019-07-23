@@ -161,7 +161,7 @@ class BaseHost(object):
 
 
 class CNVHost(BaseHost):
-    TYPE = BaseHost.TYPE_VDSM
+    TYPE = BaseHost.TYPE_POD
 
     def __init__(self):
         super(CNVHost, self).__init__()
@@ -321,7 +321,7 @@ class K8SCommunicator(object):
 
 
 class OSPHost(BaseHost):
-    TYPE = BaseHost.TYPE_VDSM
+    TYPE = BaseHost.TYPE_OSP
 
     def create_runner(self, *args, **kwargs):
         return SystemdRunner(self, *args, **kwargs)
