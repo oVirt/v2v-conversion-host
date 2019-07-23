@@ -1003,8 +1003,12 @@ class State(object):  # {{{
         def write(self):
             state = self._state.copy()
             del state['internal']
-            with open(self.state_file, 'w') as f:
+            tmp_state = tempfile.mkstemp(
+                suffix='.v2v.state',
+                dir=os.path.dirname(self.state_file))
+            with os.fdopen(tmp_state[0], 'w') as f:
                 json.dump(state, f)
+            os.rename(tmp_state[1], self.state_file)
 
     instance = None
 
