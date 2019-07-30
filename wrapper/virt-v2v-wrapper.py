@@ -324,7 +324,11 @@ class OSPHost(BaseHost):
     TYPE = BaseHost.TYPE_OSP
 
     def create_runner(self, *args, **kwargs):
-        return SystemdRunner(self, *args, **kwargs)
+        state = State().instance
+        if state.daemonize:
+            return SystemdRunner(self, *args, **kwargs)
+        else:
+            return SubprocessRunner(self, *args, **kwargs)
 
     def get_logs(self):
         log_dir = '/var/log/virt-v2v'
@@ -653,7 +657,11 @@ class VDSMHost(BaseHost):
                 connection.close()
 
     def create_runner(self, *args, **kwargs):
-        return SystemdRunner(self, *args, **kwargs)
+        state = State().instance
+        if state.daemonize:
+            return SystemdRunner(self, *args, **kwargs)
+        else:
+            return SubprocessRunner(self, *args, **kwargs)
 
     def get_logs(self):
         """ Returns tuple with directory for virt-v2v log and wrapper log """
@@ -975,6 +983,7 @@ class State(object):  # {{{
                     'network': None,
                     }
                 }
+            self.daemonize = True
             self.state_file = None
             self.v2v_log = None
             self.machine_readable_log = None
@@ -2077,14 +2086,17 @@ def main():
             print('virt-v2v-wrapper %s' % VERSION)
             sys.exit(0)
 
+    state = State().instance
+
     # Read and parse input -- hopefully this should be safe to do as root
     data = json.load(sys.stdin)
 
     # Fill in defaults
     if 'daemonize' not in data:
-        data['daemonize'] = True
+        data['daemonize'] = state.daemonize
+    else:
+        state.daemonize = data['daemonize']
 
-    state = State().instance
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
 
