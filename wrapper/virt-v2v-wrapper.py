@@ -39,10 +39,12 @@ import six
 if six.PY2:
     from urlparse import urlparse
     DEVNULL = open(os.devnull, 'r+')
+    py2unimode = 'U'
 else:
     from urllib.parse import urlparse
     xrange = range
     DEVNULL = subprocess.DEVNULL
+    py2unimode = ''
 
 # Wrapper version
 VERSION = "22"
@@ -1171,11 +1173,15 @@ class OutputParser(object):  # {{{
                     and os.path.exists(state.machine_readable_log):
                 continue
             time.sleep(1)
-        self._log = open(state.v2v_log, 'rbU')
-        self._machine_log = open(state.machine_readable_log, 'rbU')
+        self._log = open(state.v2v_log, 'rb' + py2unimode)
+        self._machine_log = open(state.machine_readable_log, 'rb' + py2unimode)
         self._current_disk = None
         self._current_path = None
         self._duplicate = duplicate
+
+    def __del__(self):
+        self._log.close()
+        self._machine_log.close()
 
     def parse(self, state):
         line = self._machine_log.readline()
