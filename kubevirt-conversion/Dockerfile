@@ -23,6 +23,10 @@ RUN yum -y install \
 
 FROM common as builder
 
+RUN yum -y install \
+  python-devel \
+  python-setuptools
+
 # The container image cannot handle sparse file properly. Keep --size to the
 # required minimum.
 RUN /usr/bin/supermin5 \
@@ -37,6 +41,12 @@ RUN /usr/bin/supermin5 \
     touch /usr/lib64/guestfs/README.fixed && \
     LIBGUESTFS_BACKEND=direct libguestfs-test-tool
 
+# TODO: use RPM
+RUN cd /source && \
+  python setup.py install --record /tmp/filelist.txt --skip-build && \
+  tar -cPf /tmp/wrapper_output.tar --no-unquote --files-from=/tmp/filelist.txt
+# Ideally use --verbatim-files-from, but tar from centos-7 does not know that.
+
 FROM common
 
 COPY --from=builder /usr/lib64/guestfs/ /usr/lib64/guestfs/
@@ -48,9 +58,10 @@ RUN install --mode=0775 --group=0 -d /data && \
     ln -s /data/vddklib/vmware-vix-disklib-distrib /opt/vmware-vix-disklib-distrib &&\
     true
 
+COPY --from=builder /tmp/wrapper_output.tar /tmp/wrapper_output.tar
+RUN tar xvf /tmp/wrapper_output.tar
+
 COPY entrypoint /usr/local/bin/entrypoint
-# TODO: use RPM
-COPY virt-v2v-wrapper.py /usr/local/bin/virt-v2v-wrapper
 
 VOLUME ["/opt/vmware-vix-disklib-distrib"]
 ENTRYPOINT ["/usr/local/bin/entrypoint"]

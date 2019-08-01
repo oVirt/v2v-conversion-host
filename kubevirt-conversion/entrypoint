@@ -24,4 +24,4 @@ echo
 echo "...  OK  ..."
 echo
 
-exec /usr/local/bin/virt-v2v-wrapper $@ < /data/input/conversion.json
+exec /usr/bin/virt-v2v-wrapper $@ < /data/input/conversion.json
