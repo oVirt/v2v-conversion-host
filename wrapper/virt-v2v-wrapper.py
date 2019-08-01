@@ -76,7 +76,7 @@ DIRECT_BACKEND = True
 class BaseHost(object):
     TYPE_UNKNOWN = 'unknown'
     TYPE_OSP = 'osp'
-    TYPE_POD = 'pod'
+    TYPE_CNV = 'cnv'
     TYPE_VDSM = 'vdsm'
     TYPE = TYPE_UNKNOWN
 
@@ -92,7 +92,7 @@ class BaseHost(object):
         elif 'osp_environment' in data:
             return BaseHost.TYPE_OSP
         elif not data['daemonize']:
-            return BaseHost.TYPE_POD
+            return BaseHost.TYPE_CNV
         else:
             return BaseHost.TYPE_UNKNOWN
 
@@ -102,7 +102,7 @@ class BaseHost(object):
             return OSPHost()
         if host_type == BaseHost.TYPE_VDSM:
             return VDSMHost()
-        if host_type == BaseHost.TYPE_POD:
+        if host_type == BaseHost.TYPE_CNV:
             return CNVHost()
         else:
             raise ValueError("Cannot build host of type: %r" % host_type)
@@ -161,7 +161,7 @@ class BaseHost(object):
 
 
 class CNVHost(BaseHost):
-    TYPE = BaseHost.TYPE_POD
+    TYPE = BaseHost.TYPE_CNV
 
     def __init__(self):
         super(CNVHost, self).__init__()
