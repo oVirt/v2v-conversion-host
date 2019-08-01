@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 #
 # vim: foldmethod=marker foldlevel=99
 #
