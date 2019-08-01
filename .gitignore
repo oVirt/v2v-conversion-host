@@ -3,5 +3,11 @@
 .tox/
 exported-artifacts/
 kubevirt-vmware/build/_output
-tests/wrapper/__pycache__/
+__pycache__/
 v2v-conversion-host.spec
+
+build/
+dist/
+venv/
+*.egg-info/
+.eggs/
