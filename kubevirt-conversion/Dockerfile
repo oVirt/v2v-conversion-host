@@ -1,4 +1,4 @@
-FROM centos:7
+FROM centos:7 as common
 
 RUN cd /etc/yum.repos.d/ && \
     curl -LO https://fedorapeople.org/groups/virt/virtio-win/virtio-win.repo && \
@@ -20,6 +20,9 @@ RUN yum -y install \
     && \
     yum clean all
 
+
+FROM common as builder
+
 # The container image cannot handle sparse file properly. Keep --size to the
 # required minimum.
 RUN /usr/bin/supermin5 \
@@ -33,6 +36,10 @@ RUN /usr/bin/supermin5 \
         -o /usr/lib64/guestfs/ && \
     touch /usr/lib64/guestfs/README.fixed && \
     LIBGUESTFS_BACKEND=direct libguestfs-test-tool
+
+FROM common
+
+COPY --from=builder /usr/lib64/guestfs/ /usr/lib64/guestfs/
 
 RUN install --mode=0775 --group=0 -d /data && \
     install --mode=0775 --group=0 -d /data/input && \

@@ -74,14 +74,11 @@ do_build_conversion() {
 
     pushd kubevirt-conversion
     # TODO: use RPM with wrapper
-    cp ../wrapper/virt-v2v-wrapper.py .
-    chmod a+rx virt-v2v-wrapper.py
-    docker build -t "$IMAGE:$TAG" .
-    rm virt-v2v-wrapper.py
+    ${CONTAINER_MGMT} build -v "$(dirname $PWD)":/source -t "$IMAGE:$TAG" .
     popd
 
     # TODO: When to tag as 'latest'? Do it manualy for now.
-    #docker push quay.io/nyoxi/kubevirt-conversion:latest
+    #${CONTAINER_MGMT} push quay.io/nyoxi/kubevirt-conversion:latest
 }
 
 do_build_vmware() {
