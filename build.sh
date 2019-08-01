@@ -7,6 +7,13 @@ KUBEVIRT_VMWARE_RELEASE="2"
 
 QUAY_NS=quay.io/kubevirt
 
+CONTAINER_MGMT=docker
+
+if ! type "${CONTAINER_MGMT}" &>/dev/null; then
+    if type "podman" &>/dev/null; then
+        CONTAINER_MGMT=podman
+    fi
+fi
 
 if git describe --exact-match --tags --match "v[0-9]*" > /dev/null 2>&1 ; then
     RPM_RELEASE="1"
