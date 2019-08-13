@@ -44,6 +44,13 @@ General information:
 * `transport_method`: type of transport to use; supported methods are `ssh` and
   `vddk`.
 
+* `daemonize`: boolean declaring whether to daemonize virt-v2v or not (default
+  is `true`). When virt-v2v is not daemonized it is not started in transient
+  systemd unit, that means throttling options are not available. On the other
+  hand it allows one to run the conversion in environment without systemd (e.g.
+  container). For Kubevirt container virt-v2v is never daemonized no matter
+  what this option is set to.
+
 For `vddk` the following keys need to be specified:
 
 * `vmware_uri`: libvirt URI of the source hypervisor
