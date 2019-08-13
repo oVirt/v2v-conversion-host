@@ -2168,6 +2168,8 @@ def main():
                                    ' must be provided in network mapping')
             else:
                 hard_error('"network_mappings" must be an array')
+        else:
+            data['network_mappings'] = []
 
         # Virtio drivers
         if 'virtio_win' in data:
