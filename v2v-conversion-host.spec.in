@@ -143,6 +143,12 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Tue Aug 13 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.15.0-1
+- Wrapper changes:
+  * allow subprocess mode for OSP/RHV outputs
+  * make state writing atomic
+  * several minor bugfixes
+
 * Tue Jun 25 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.14.2-1
 - Wrapper changes:
   * fixes for Python 3 compatibility
