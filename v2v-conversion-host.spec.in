@@ -6,8 +6,12 @@
 
 %if %{with python3}
 %global python %{__python3}
+BuildRequires: %{py3_dist setuptools}
+BuildRequires: python3-devel
 %else
 %global python %{__python}
+BuildRequires: python-setuptools
+BuildRequires: python-devel
 %endif
 
 %global rolename v2v-conversion-host
@@ -65,9 +69,8 @@ Summary: Daemonizing wrapper for virt-v2v
 BuildArch: noarch
 Requires: libcgroup-tools
 %if %{with python3}
-BuildRequires: python3-devel
 Requires: python3
-Requires: python3-pycurl
+Requires: %{py3_dist pycurl}
 %else
 Requires: python >= 2.7
 Requires: python-pycurl
@@ -101,6 +104,9 @@ Daemonizing wrapper for virt-v2v.
 export DATA_DIR=%{buildroot}%{_datadir}
 export BIN_DIR=%{buildroot}%{_bindir}
 export PYTHON=%{python}
+
+%{python} setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+
 sh build.sh install
 #install -p -m 755 kubevirt-provider/kubevirt-provider %{buildroot}%{_bindir}
 
@@ -128,7 +134,7 @@ ln -s %{_bindir}/virt-v2v-wrapper %{buildroot}/usr/bin/virt-v2v-wrapper.py
 #%doc docs/
 #%license LICENSE
 
-%files wrapper
+%files wrapper -f INSTALLED_FILES
 %{_bindir}/virt-v2v-wrapper*
 %doc README.md
 %doc docs/

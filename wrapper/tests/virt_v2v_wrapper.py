@@ -1,1 +1,1 @@
-../virt-v2v-wrapper.py
+../virt_v2v_wrapper.py

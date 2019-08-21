@@ -1,5 +1,5 @@
 import unittest
-import virt_v2v_wrapper as wrapper
+from wrapper import virt_v2v_wrapper as wrapper
 
 
 class TestV2vArgs(unittest.TestCase):

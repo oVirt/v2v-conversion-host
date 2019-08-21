@@ -7,7 +7,7 @@ except ImportError:
     # Python 3
     from io import StringIO
 
-import virt_v2v_wrapper as wrapper
+from wrapper import virt_v2v_wrapper as wrapper
 
 
 class TestRoutines(unittest.TestCase):

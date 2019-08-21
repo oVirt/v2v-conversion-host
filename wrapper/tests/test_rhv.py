@@ -6,7 +6,7 @@ except ImportError:
     # Python2
     from mock import patch
 
-import virt_v2v_wrapper as wrapper
+from wrapper import virt_v2v_wrapper as wrapper
 
 
 class TestRHV(unittest.TestCase):

@@ -56,9 +56,10 @@ do_install() {
   mkdir -p $ROLES_DIR
   cp -pR "ansible/$ROLE_NAME" "$ROLES_DIR"
 
-  mkdir -p $BIN_DIR
-  install --mode=0755 -T wrapper/virt-v2v-wrapper.py $BIN_DIR/virt-v2v-wrapper
-  sed -i "1s#/usr/bin/env python\$#$PYTHON#" $BIN_DIR/virt-v2v-wrapper
+  if [[ -z "${RPM_BUILD_ROOT}" ]]; then
+      PYTHON_PREFIX="${PREFIX:-$(python-config --prefix)}"
+      python setup.py install --prefix "${PYTHON_PREFIX}"
+  fi
 
   mkdir -p "$AUX_DATA_DIR/playbooks"
   install -t "$AUX_DATA_DIR/playbooks" ansible/examples/*.yml
