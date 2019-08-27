@@ -1,12 +1,12 @@
 import unittest
-from wrapper import virt_v2v_wrapper as wrapper
+from wrapper import hosts
 
 
 class TestOSP(unittest.TestCase):
     """ Tests specific to OpenStack """
 
     def test_disk_naming(self):
-        host = wrapper.OSPHost()
+        host = hosts.OSPHost()
         with self.assertRaises(ValueError):
             host._get_disk_name(0)
         self.assertEqual('vda', host._get_disk_name(1))
