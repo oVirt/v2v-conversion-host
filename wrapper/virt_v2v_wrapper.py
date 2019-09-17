@@ -705,6 +705,11 @@ class VDSMHost(BaseHost):
                         logging.info('Removing disk id=%s', disk_id)
                         disk_service.remove()
                         disk_ids.remove(disk_id)
+                    except self.sdk.NotFoundError:
+                        logging.info('Disk id=%s does not exist (already ' +
+                                     'removed?), skipping it',
+                                     disk_id)
+                        disk_ids.remove(disk_id)
                     except self.sdk.Error:
                         logging.exception('Failed to remove disk id=%s',
                                           disk_id)
