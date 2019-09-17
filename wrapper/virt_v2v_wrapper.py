@@ -708,10 +708,14 @@ class VDSMHost(BaseHost):
                     except self.sdk.Error:
                         logging.exception('Failed to remove disk id=%s',
                                           disk_id)
-                if time.time() > endt:
-                    logging.error('Timed out waiting for disks: %r', disk_ids)
-                    break
-                time.sleep(1)
+                # Avoid checking timeouts, and waiting, if there are no
+                # more disks to remove
+                if len(disk_ids) > 0:
+                    if time.time() > endt:
+                        logging.error('Timed out waiting for disks: %r',
+                                      disk_ids)
+                        break
+                    time.sleep(1)
 
     def check_install_drivers(self, data):
         """ Validate and/or find ISO with guest tools and drivers """
