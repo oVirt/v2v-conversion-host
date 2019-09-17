@@ -696,7 +696,7 @@ class VDSMHost(BaseHost):
             logging.info('Removing disks: %r', disk_ids)
             endt = time.time() + TIMEOUT
             while len(disk_ids) > 0:
-                for disk_id in disk_ids:
+                for disk_id in disk_ids[:]:
                     try:
                         disk_service = disks_service.disk_service(disk_id)
                         disk = disk_service.get()
