@@ -15,6 +15,7 @@ addons:
   apt:
     packages:
       - python-pip
+      - libgnutls.dev  # required by pycurl
 
 
 before_install:
