@@ -24,4 +24,20 @@ echo
 echo "...  OK  ..."
 echo
 
+if ls /dev/v2v-disk* 2>/dev/null ; then
+  echo "Symlinking block devices..."
+  mkdir -p /data/vm
+  for d in /dev/v2v-disk* ; do
+    n=$(expr "$d" : '/dev/v2v-disk\([0-9]*\)')
+    if [ $? -eq 0 ] ; then
+      mkdir -p "/data/vm/disk$n"
+      ln -s "$d" "/data/vm/disk$n/disk.img"
+    fi
+  done
+fi
+
+echo "Listing content of /data"
+ls -lR /data
+
+echo "Starting virt-v2v-wrapper..."
 exec /usr/bin/virt-v2v-wrapper $@ < /data/input/conversion.json
