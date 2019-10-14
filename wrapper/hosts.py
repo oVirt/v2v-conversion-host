@@ -364,9 +364,34 @@ class OSPHost(BaseHost):
                           state['internal']['disk_ids'])
             logging.debug('Assumed volume list: %r', volumes)
             return False
-        # Move volumes to destination project
         for vol in volumes:
-            logging.info('Transfering volume: %s', vol)
+            logging.info('Transferring volume: %s', vol)
+            # Checking if volume is in available state
+            is_available = False
+            start_at = time.time()
+            while start_at + TIMEOUT > time.time():
+                volume_state = self._run_openstack([
+                        'volume', 'show', '-f', 'value', '-c', 'status', vol,
+                        ], data)
+                if volume_state is None:
+                    error('Unable to get volume state, quitting.')
+                    return False
+                volume_state = volume_state.rstrip()
+                logging.info('Current volume state: %s.', volume_state)
+                if volume_state == 'available':
+                    logging.info(
+                        'Volume detached in %s second(s), trasferring.',
+                        int(time.time() - start_at))
+                    is_available = True
+                    break
+                time.sleep(20)
+            if not is_available:
+                error(
+                    'Volume did not get ready (available) '
+                    'for transfer within %s seconds.',
+                    TIMEOUT)
+                return False
+            # Move volumes to the destination project
             transfer = self._run_openstack([
                 'volume', 'transfer', 'request', 'create',
                 '--format', 'json',
