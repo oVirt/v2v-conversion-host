@@ -14,7 +14,7 @@ rpmbuild \
     -ts ./*.gz
 
 # install any build requirements
-yum-builddep output/*src.rpm
+yum-builddep -y output/*src.rpm
 
 # create the rpms
 rpmbuild \
