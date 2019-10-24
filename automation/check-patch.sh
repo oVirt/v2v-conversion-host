@@ -14,7 +14,13 @@ rpmbuild \
     -ts ./*.gz
 
 # install any build requirements
-yum-builddep -y output/*src.rpm
+DISTVER="$(rpm --eval "%dist"|cut -c2-4)"
+if [[ "${DISTVER}" == "el7" ]]; then
+    yum-builddep -y output/*src.rpm
+else
+    dnf builddep -y output/*src.rpm
+fi
+
 
 # create the rpms
 rpmbuild \
