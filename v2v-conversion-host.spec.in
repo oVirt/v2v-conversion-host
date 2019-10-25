@@ -36,7 +36,7 @@ Project consists of:
 
 %package ansible
 Summary: Ansible role to setup oVirt host as conversion host for ManageIQ
-Requires: ansible >= 2.4
+Requires: ansible >= 2.8
 BuildArch: noarch
 Provides: ovirt-ansible-v2v-conversion-host = %{version}-%{release}
 Obsoletes: ovirt-ansible-v2v-conversion-host < 1.11.0-1
