@@ -18,6 +18,9 @@ class TestOSP(unittest.TestCase):
         self.assertEqual('vdba', host._get_disk_name(53))
         self.assertEqual('vdzy', host._get_disk_name(701))
         self.assertEqual('vdzz', host._get_disk_name(702))
+
+    def test_ip_conversions(self):
+        host = hosts.OSPHost()
         self.assertEqual(
             '11000000101010000000000000101010',
             host._ip_to_binary('192.168.0.42')
