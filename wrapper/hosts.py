@@ -418,9 +418,23 @@ class OSPHost(BaseHost):
                 '%s_port_%s' % (vm_name, len(ports)),
                 ]
             if 'ip_address' in nic:
-                port_cmd.extend([
-                    '--fixed-ip', 'ip-address=%s' % nic['ip_address'],
-                    ])
+                ipaddr = nic['ip_address']
+                subnets_cmd = [
+                    'subnet', 'list',
+                    '--network', nic['destination'],
+                    '-f', 'json'
+                ]
+                subnets_json = self._run_openstack(subnets_cmd, data)
+                if subnets_json is not None:
+                    subnets = json.loads(subnets_json)
+                    for subnet in subnets:
+                        network = subnet["Subnet"]
+                        if self._check_ip_in_network(ipaddr, network):
+                            port_cmd.extend([
+                                '--fixed-ip',
+                                'ip-address=%s' % ipaddr,
+                            ])
+                            break
             for grp in data['osp_security_groups_ids']:
                 port_cmd.extend(['--security-group', grp])
             port = self._run_openstack(port_cmd, data, destination=True)
@@ -524,6 +538,24 @@ class OSPHost(BaseHost):
             if 'mac_address' not in mapping:
                 hard_error('Missing mac address in one of network mappings')
         return data
+
+    def _check_ip_in_network(self, ipaddr, network):
+        [netaddr, netsize] = network.split('/')
+        netsize = int(netsize)
+        ip_prefix_bin = self._get_prefix_bin(ipaddr, netsize)
+        net_prefix_bin = self._get_prefix_bin(netaddr, netsize)
+        if ip_prefix_bin == net_prefix_bin:
+            return True
+        return False
+
+    def _ip_to_binary(self, ipaddr):
+        octet_list_int = ipaddr.split('.')
+        octet_list_bin = [format(int(i), '08b') for i in octet_list_int]
+        return ('').join(octet_list_bin)
+
+    def _get_prefix_bin(self, ipaddr, netsize):
+        ipaddr_bin = self._ip_to_binary(ipaddr)
+        return ipaddr_bin[0:32-(32-netsize)]
 
     def _get_disk_name(self, index):
         if index < 1:
