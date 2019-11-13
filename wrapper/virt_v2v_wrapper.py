@@ -504,7 +504,7 @@ def main():
                 '.v2v_luks_keys_vault.json'
             )
         if os.exists(data['luks_keys_vault']):
-            file_stat = os.stat(data['luks_keys_vaul'])
+            file_stat = os.stat(data['luks_keys_vault'])
             if file_stat.st_uid != host.get_uid():
                 hard_error('LUKS keys vault does\'nt belong to'
                            'user running virt-v2v-wrapper')
