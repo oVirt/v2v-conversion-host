@@ -25,6 +25,7 @@ import pycurl
 import re
 import signal
 import subprocess
+import stat
 import sys
 import six
 import tempfile
@@ -123,6 +124,16 @@ def prepare_command(data, v2v_caps, agent_sock=None):
             else:
                 v2v_args.extend(['--bridge', '%s:%s' %
                                 (mapping['source'], mapping['destination'])])
+
+    if 'luks_keys_files' in data:
+        for luks_key in data['luks_keys_files']:
+            v2v_args.extend([
+                '--key',
+                '%s:file:%s' % (
+                    luks_key['device'],
+                    luks_key['filename']
+                )
+            ])
 
     # Prepare environment
     v2v_env = os.environ.copy()
@@ -486,6 +497,32 @@ def main():
                                                   password_files,
                                                   host.get_uid(),
                                                   host.get_gid())
+
+        if 'luks_keys_vault' not in data:
+            data['luks_keys_vault'] = os.path.join(
+                os.environ['HOME'],
+                '.v2v_luks_keys_vault.json'
+            )
+        if os.exists(data['luks_keys_vault']):
+            file_stat = os.stat(data['luks_keys_vaul'])
+            if file_stat.st_uid != host.get_uid():
+                hard_error('LUKS keys vault does\'nt belong to'
+                           'user running virt-v2v-wrapper')
+            if file_stat.st_mode & stat.S_IRWXO > 0:
+                hard_error('LUKS keys vault is accessible to others')
+            if file_stat.st_mode & stat.S_IRWXG > 0:
+                hard_error('LUKS keys vault is accessible to group')
+            luks_keys_vault = json.load(data['luks_keys_vault'])
+            if data['vm_name'] in luks_keys_vault:
+                data['luks_keys_files'] = []
+                for luks_key in luks_keys_vault[data['vm_name']]:
+                    data['luks_keys_files'].append({
+                        'device': luks_key['device'],
+                        'filename': write_password(luks_key['key'],
+                                                   password_files,
+                                                   host.get_uid(),
+                                                   host.get_gid())
+                    })
 
         try:
             if 'source_disks' in data:

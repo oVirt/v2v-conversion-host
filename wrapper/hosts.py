@@ -780,7 +780,6 @@ class VDSMHost(BaseHost):
                 v2v_args.extend(['-oo', 'rhv-verifypeer=%s' %
                                 ('false' if data['insecure_connection'] else
                                  'true')])
-
         elif 'export_domain' in data:
             v2v_args.extend([
                 '-o', 'rhv',
