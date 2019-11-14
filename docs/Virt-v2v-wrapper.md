@@ -96,6 +96,9 @@ Miscellaneous:
 
 * `throttling`: optional key with initial throttling option (see below)
 
+* `luks_keys_vault`: optional key to specify a JSON file containing the LUKS
+  keys for encrypted devices (see below).
+
 Example:
 
     {
@@ -121,7 +124,8 @@ Example:
                 "destination": "networkX2"
             }
         ],
-        "virtio_win": "virtio-win-0.1.141.iso"
+        "virtio_win": "virtio-win-0.1.141.iso",
+        "luks_keys_vault": "/path_to/luks_key_vault.json"
     }
 
 ## Output configuration
@@ -279,3 +283,38 @@ Due to design of cgroup filter on tc the network is limited on output only.
 The limit is specified in bytes per seconds without any units. E.g. "12345".
 Note that despite being a number it should be passed as string in JSON. To
 remove any limit one can pass the string "unlimited".
+
+
+### LUKS encrypted devices
+
+virt-v2v-wrapper always looks for a default path:
+`${HOME}/.v2v_luks_keys_vault.json`. The file MUST NOT be readable by group
+or other.
+
+In the file, the devices names are not the actual names of the devices inside
+the virtual machine. They mainly represent the order: /dev/sda means that it
+is the first disk, /dev/sda1 means that it is the first encrypted partition
+on the first disk.
+
+Example LUKS keys file:
+
+```
+{
+    "my_vm_1": [
+        {
+            "device": "/dev/sda1",
+            "key": "secret11"
+        },
+        {
+            "device": "/dev/sda2",
+            "key": "secret12"
+        }
+    ],
+    "my_vm_2": [
+        {
+            "device": "/dev/sda1",
+            "key": "secret11"
+        }
+    ]
+}
+```
