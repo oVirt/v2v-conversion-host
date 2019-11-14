@@ -1,5 +1,5 @@
 ovirt-engine-sdk-python
-pycurl --global-option="--with-openssl"
+pycurl
 six
 yamllint
 tox
