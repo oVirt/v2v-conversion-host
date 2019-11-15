@@ -113,9 +113,10 @@ class TestRHV(unittest.TestCase):
             '-oc', 'https://example.my-ovirt.org/ovirt-engine/api',
             '-os', 'data',
             '-op', '/rhv/password',
-            '-oo', 'rhv-cafile=/rhv/ca.pem',
             '-oo', 'rhv-cluster=Default',
             '-oo', 'rhv-direct',
+            '-oo', 'rhv-verifypeer=true',
+            '-oo', 'rhv-cafile=/rhv/ca.pem',
         ]
         host = hosts.BaseHost.factory(hosts.BaseHost.TYPE_VDSM)
         v2v_args, v2v_env = host.prepare_command(
@@ -132,7 +133,6 @@ class TestRHV(unittest.TestCase):
             '-oc', 'https://example.my-ovirt.org/ovirt-engine/api',
             '-os', 'data',
             '-op', '/rhv/password',
-            '-oo', 'rhv-cafile=/rhv/ca.pem',
             '-oo', 'rhv-cluster=Default',
             '-oo', 'rhv-direct',
             '-oo', 'rhv-verifypeer=false',
