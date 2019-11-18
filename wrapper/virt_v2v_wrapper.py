@@ -503,7 +503,7 @@ def main():
                 os.environ['HOME'],
                 '.v2v_luks_keys_vault.json'
             )
-        if os.exists(data['luks_keys_vault']):
+        if os.path.exists(data['luks_keys_vault']):
             file_stat = os.stat(data['luks_keys_vault'])
             if file_stat.st_uid != host.get_uid():
                 hard_error('LUKS keys vault does\'nt belong to'
