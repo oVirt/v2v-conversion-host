@@ -114,7 +114,7 @@ class BaseHost(object):
 
     def validate_data(self, data):
         """ Validate input data, fill in defaults, etc """
-        hard_error("Cannot validate data for uknown host type")
+        hard_error("Cannot validate data for unknown host type")
 
 
 class CNVHost(BaseHost):

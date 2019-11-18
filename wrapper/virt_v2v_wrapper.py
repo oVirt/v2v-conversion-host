@@ -394,7 +394,7 @@ def main():
     host_type = BaseHost.detect(data)
     host = BaseHost.factory(host_type)
 
-    # The logging is delayed after we now which user runs the wrapper.
+    # The logging is delayed until we now which user runs the wrapper.
     # Otherwise we would have two logs.
     log_tag = host.get_tag()
     log_dirs = host.get_logs()
