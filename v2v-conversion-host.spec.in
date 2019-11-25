@@ -105,6 +105,16 @@ if [ $1 -eq 1 -a -f /usr/bin/virt-v2v-wrapper.py ] ; then
 fi
 
 %changelog
+* Mon Nov 25 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.16.0-1
+- Ansible changes:
+  * bump requirement to Ansible 2.8
+- Wrapper changes:
+  * Add ability to use a LUKS keys vault (#65)
+  * Check if IP is in subnet before forcing IP on OpenStack port (#62)
+  * Wait for OSP volumes to become ready before transfer (#59)
+  * Modularization of the Python code
+  * Various bugfixes in RHV disk cleanup (#58)
+
 * Tue Aug 13 2019 Tomáš Golembiovský <tgolembi@redhat.com> 1.15.0-1
 - Wrapper changes:
   * allow subprocess mode for OSP/RHV outputs

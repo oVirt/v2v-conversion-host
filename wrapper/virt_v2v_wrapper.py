@@ -45,7 +45,7 @@ else:
     DEVNULL = subprocess.DEVNULL
 
 # Wrapper version
-VERSION = "22"
+VERSION = "23"
 
 LOG_LEVEL = logging.DEBUG
 STATE_DIR = '/tmp'
