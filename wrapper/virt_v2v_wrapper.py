@@ -512,7 +512,8 @@ def main():
                 hard_error('LUKS keys vault is accessible to others')
             if file_stat.st_mode & stat.S_IRWXG > 0:
                 hard_error('LUKS keys vault is accessible to group')
-            luks_keys_vault = json.load(data['luks_keys_vault'])
+            with open(data['luks_keys_vault']) as fp:
+                luks_keys_vault = json.load(fp)
             if data['vm_name'] in luks_keys_vault:
                 data['luks_keys_files'] = []
                 for luks_key in luks_keys_vault[data['vm_name']]:
