@@ -5,7 +5,7 @@ import six
 import subprocess
 import time
 
-from .common import error
+from .common import atexit_command, error
 from .tc import TcController
 
 
@@ -214,7 +214,11 @@ class SystemdRunner(BaseRunner):
             error('Failed to get virt-v2v return code')
             return -1
         try:
-            return int(code)
+            code = int(code)
         except ValueError:
             error('Failed to decode virt-v2v return code', exception=True)
             return -1
+        if code != 0:
+            # Schedule cleanup of the failed unit
+            atexit_command(['systemctl', 'reset-failed', self._service_name])
+        return code
