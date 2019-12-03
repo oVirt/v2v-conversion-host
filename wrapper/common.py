@@ -1,13 +1,31 @@
+import atexit
 import copy
 import logging
 import re
 import six
+import subprocess
 import sys
 
 from .singleton import State
 
 if six.PY3:
     xrange = range
+
+
+def atexit_command(cmd):
+    """
+    Run command ignoring any errors. This is supposed to be used with atexit.
+    """
+    def remove(cmd):
+        try:
+            logging.info('Running command at exit: %r', cmd)
+            subprocess.check_call(cmd)
+        except subprocess.CalledProcessError as e:
+            logging.warning(
+                'Ignoring failed command at exit,'
+                'returncode=%d, output=\n%s\n',
+                e.returncode, e.output)
+    atexit.register(lambda: remove(cmd))
 
 
 def error(short_message, *args, **kwargs):

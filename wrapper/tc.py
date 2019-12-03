@@ -1,28 +1,12 @@
-import atexit
 import logging
 import os
 import six
 import subprocess
 
+from .common import atexit_command
 
 if six.PY3:
     xrange = range
-
-
-def atexit_command(cmd):
-    """
-    Run command ignoring any errors. This is supposed to be used with atexit.
-    """
-    def remove(cmd):
-        try:
-            logging.info('Running command at exit: %r', cmd)
-            subprocess.check_call(cmd)
-        except subprocess.CalledProcessError as e:
-            logging.warning(
-                'Ignoring failed command at exit,'
-                'returncode=%d, output=\n%s\n',
-                e.returncode, e.output)
-    atexit.register(lambda: remove(cmd))
 
 
 class TcController(object):
