@@ -33,7 +33,7 @@ import time
 
 from .singleton import State
 from .common import error, hard_error, log_command_safe
-from .hosts import BaseHost
+from .hosts import BaseHost, CNVHost
 from .runners import SystemdRunner
 from .log_parser import log_parser
 from .checks import CHECKS
@@ -260,7 +260,7 @@ def wrapper(host, data, v2v_caps, agent_sock=None):
     try:
         state['started'] = True
         state.write()
-        with log_parser(not data['daemonize']) as parser:
+        with log_parser(type(host) is CNVHost) as parser:
             while runner.is_running():
                 state = parser.parse(state)
                 state.write()
