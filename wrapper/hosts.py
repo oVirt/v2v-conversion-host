@@ -767,18 +767,19 @@ class VDSMHost(BaseHost):
                 ])
 
         if 'rhv_url' in data:
-            verifypeer = str(not data['insecure_connection']).lower()
             v2v_args.extend([
                 '-o', 'rhv-upload',
                 '-oc', data['rhv_url'],
                 '-os', data['rhv_storage'],
                 '-op', data['rhv_password_file'],
+                '-oo', 'rhv-cafile=%s' % data['rhv_cafile'],
                 '-oo', 'rhv-cluster=%s' % data['rhv_cluster'],
                 '-oo', 'rhv-direct',
-                '-oo', 'rhv-verifypeer=%s' % verifypeer,
                 ])
-            if not data['insecure_connection']:
-                v2v_args.extend(['-oo', 'rhv-cafile=%s' % data['rhv_cafile']])
+            if data['insecure_connection']:
+                v2v_args.extend(['-oo', 'rhv-verifypeer=%s' %
+                                ('false' if data['insecure_connection'] else
+                                 'true')])
         elif 'export_domain' in data:
             v2v_args.extend([
                 '-o', 'rhv',
