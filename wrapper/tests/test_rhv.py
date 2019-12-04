@@ -116,6 +116,7 @@ class TestRHV(unittest.TestCase):
             '-oo', 'rhv-cafile=/rhv/ca.pem',
             '-oo', 'rhv-cluster=Default',
             '-oo', 'rhv-direct',
+            '-oo', 'rhv-verifypeer=true',
         ]
         host = hosts.BaseHost.factory(hosts.BaseHost.TYPE_VDSM)
         v2v_args, v2v_env = host.prepare_command(
