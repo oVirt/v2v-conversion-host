@@ -1,3 +1,9 @@
+# Deprecated
+
+This repository is deprecated. Newer source is in
+[ManageIQ/manageiq-v2v-conversion_host](https://github.com/ManageIQ/manageiq-v2v-conversion_host).
+Changes and fixes to version 1.x of the package are in the `v1.x`.
+
 # V2V - Conversion Host - Ansible
 
 This repository contains Ansible artifacts used for V2V oVirt/RHV Conversion
